@@ -12,8 +12,9 @@
   <script src="js/arcade-core.js"></script>
 </head>
 <body class="arcade-body">
-  <!-- Główna zawartość arcade (ukryta do czasu inicjalizacji) -->
-  <div class="shell" id="arcade-main" style="display:none;">
+  <!-- Pasek logowania / gościa / usera wstrzyknie ArcadeCore -->
+
+  <div class="shell" id="arcade-main">
     <div class="card">
       <div class="header">
         <div>
@@ -98,7 +99,7 @@
         file: "language/znajdz_slowo.html",
         name: "Znajdź słowo",
         icon: "📖",
-        thumb: null, // np. "img/znajdz_slowo.png", jeśli dorobisz miniaturkę
+        thumb: null,
         description: "Szukaj słów pasujących do obrazków. Światy tematyczne, levele i punkty za serie poprawnych odpowiedzi."
       }
     ];
@@ -120,7 +121,6 @@
     ];
 
     function launchGame(file) {
-      // zawsze fullscreen – gra sama obsługuje powrót do Arcade
       window.location.href = file + "?fullscreen=1";
     }
 
@@ -128,8 +128,6 @@
       const card = document.createElement("div");
       card.className = "game-card";
 
-      // kliknięcie całej karty uruchamia grę,
-      // poza sytuacją gdy klikamy w przycisk "Graj"
       card.onclick = (e) => {
         if (e.target.closest("button")) return;
         launchGame(game.file);
@@ -211,7 +209,6 @@
           <span>${cat.name}</span>
         `;
         btn.onclick = () => {
-          // aktywny styl
           document.querySelectorAll(".cat-btn").forEach(b => {
             b.classList.toggle("active", b === btn);
           });
@@ -220,7 +217,6 @@
         catContainer.appendChild(btn);
       });
 
-      // domyślnie aktywna pierwsza kategoria
       const first = catContainer.querySelector(".cat-btn");
       if (first) {
         first.classList.add("active");
@@ -229,15 +225,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      // najpierw inicjujemy wspólny topbar / auth / gościa
-      ArcadeCore.initIndex({
-        onReady() {
-          // gdy rdzeń arcade gotowy – pokazujemy całą kartę z grami
-          document.getElementById("arcade-main").style.display = "block";
-        }
-      });
-
-      // render kategorii i gier
+      // topbar + supabase
+      ArcadeCore.initIndex({});
+      // lista gier
       renderCategories();
     });
   </script>
