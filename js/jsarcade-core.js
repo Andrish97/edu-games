@@ -1,30 +1,55 @@
-// -------------------------------------------------------
-// ArcadeCore – logika wspólna dla wszystkich gier + index
-// BEZ stylów, czysty JS
-// -------------------------------------------------------
+// js/arcade-core.js
+// Wspólny rdzeń: Supabase, gość/użytkownik, pasek u góry, zapis progresu
 
 const ArcadeCore = (() => {
-  let sb = null;
-  let guestMode = false;
-
   const SUPABASE_URL = "https://zbcpqwugthvizqzkvurw.supabase.co";
   const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiY3Bxd3VndGh2aXpxemt2dXJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MTk1NDYsImV4cCI6MjA4MDQ5NTU0Nn0.fTZiJjToYxnvhthiSIpAcmJ2wo7gQ2bAko841_dh740";
 
-  function createClient() {
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let sb = null;
+  let guestMode = false;
+
+  function ensureClient() {
+    if (!sb) {
+      if (typeof supabase === "undefined") {
+        console.error("Supabase CDN nie jest dostępny");
+        return;
+      }
+      sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+  }
+
+  function loadModeFromStorage() {
+    const mode = localStorage.getItem("arcade_mode");
+    guestMode = (mode === "guest");
+  }
+
+  function setGuestMode() {
+    guestMode = true;
+    localStorage.setItem("arcade_mode", "guest");
+  }
+
+  function setUserMode() {
+    guestMode = false;
+    localStorage.setItem("arcade_mode", "user");
   }
 
   async function getCurrentUser() {
+    ensureClient();
+    if (!sb) return null;
     const { data } = await sb.auth.getUser();
     return data.user || null;
   }
 
-  // -------------------------------
-  // Zarządzanie Progresem
-  // -------------------------------
+  // ---------- PROGRES ----------
 
   async function saveProgress(gameId, data) {
+    ensureClient();
+    if (!sb) {
+      localStorage.setItem("progress_local_" + gameId, JSON.stringify(data));
+      return;
+    }
+
     if (guestMode) {
       localStorage.setItem("progress_guest_" + gameId, JSON.stringify(data));
       return;
@@ -41,12 +66,18 @@ const ArcadeCore = (() => {
       .upsert({
         user_id: user.id,
         game_id: gameId,
-        data: data,
+        data,
         updated_at: new Date().toISOString()
       });
   }
 
   async function loadProgress(gameId) {
+    ensureClient();
+    if (!sb) {
+      const raw = localStorage.getItem("progress_local_" + gameId);
+      return raw ? JSON.parse(raw) : null;
+    }
+
     if (guestMode) {
       const raw = localStorage.getItem("progress_guest_" + gameId);
       return raw ? JSON.parse(raw) : null;
@@ -68,17 +99,15 @@ const ArcadeCore = (() => {
     return data ? data.data : null;
   }
 
-  // -------------------------------
-  // UI – Top Bar (bez stylu)
-  // -------------------------------
+  // ---------- TOPBAR ----------
 
-  function renderTopBar(container, opts = {}) {
+  function renderTopBar() {
+    loadModeFromStorage();
     const bar = document.createElement("div");
     bar.className = "arcade-topbar";
 
     bar.innerHTML = `
       <span class="arcade-user"></span>
-
       <div class="arcade-auth">
         <input type="email" placeholder="email" class="arcade-input email">
         <input type="password" placeholder="hasło" class="arcade-input pass">
@@ -89,9 +118,8 @@ const ArcadeCore = (() => {
       </div>
     `;
 
-    container.prepend(bar);
+    document.body.prepend(bar);
 
-    // obsługa przycisków
     const email = bar.querySelector(".email");
     const pass = bar.querySelector(".pass");
     const login = bar.querySelector(".login");
@@ -101,27 +129,28 @@ const ArcadeCore = (() => {
     const userLabel = bar.querySelector(".arcade-user");
 
     async function refresh() {
+      ensureClient();
       const user = await getCurrentUser();
 
       if (guestMode) {
-        userLabel.textContent = "Tryb gościa";
-        email.style.display = "none";
-        pass.style.display = "none";
-        login.style.display = "none";
-        register.style.display = "none";
+        userLabel.textContent = "Tryb gościa (lokalny zapis)";
+        email.style.display = "inline-block";
+        pass.style.display = "inline-block";
+        login.style.display = "inline-block";
+        register.style.display = "inline-block";
         logout.style.display = "none";
         return;
       }
 
       if (user) {
-        userLabel.textContent = "Zalogowany: " + user.email;
+        userLabel.textContent = "Zalogowany: " + (user.email || user.id);
         email.style.display = "none";
         pass.style.display = "none";
         login.style.display = "none";
         register.style.display = "none";
         logout.style.display = "inline-block";
       } else {
-        userLabel.textContent = "Nie zalogowany";
+        userLabel.textContent = "Nie zalogowany (zapis lokalny)";
         email.style.display = "inline-block";
         pass.style.display = "inline-block";
         login.style.display = "inline-block";
@@ -131,76 +160,77 @@ const ArcadeCore = (() => {
     }
 
     login.onclick = async () => {
+      ensureClient();
       const { error } = await sb.auth.signInWithPassword({
         email: email.value,
         password: pass.value
       });
-      if (error) alert("Błąd logowania: " + error.message);
+      if (error) {
+        alert("Błąd logowania: " + error.message);
+        return;
+      }
+      setUserMode();
       refresh();
     };
 
     register.onclick = async () => {
+      ensureClient();
       const { error } = await sb.auth.signUp({
         email: email.value,
         password: pass.value
       });
-      if (error) alert("Błąd rejestracji: " + error.message);
-      else alert("Sprawdź email, żeby potwierdzić konto.");
+      if (error) {
+        alert("Błąd rejestracji: " + error.message);
+        return;
+      }
+      alert("Sprawdź maila, żeby potwierdzić konto.");
+      setUserMode();
       refresh();
     };
 
     logout.onclick = async () => {
+      ensureClient();
       await sb.auth.signOut();
+      // po wylogowaniu traktujemy jak gościa, ale można też wyczyścić całkiem
+      setGuestMode();
       refresh();
     };
 
     guest.onclick = () => {
-      guestMode = true;
+      setGuestMode();
       refresh();
     };
 
     refresh();
   }
 
-  // -------------------------------
-  // Powrót do Arcade (bez stylu)
-  // -------------------------------
-
   function injectBackButton(backUrl) {
     const btn = document.createElement("button");
     btn.textContent = "Powrót do Arcade";
-    btn.className = "arcade-backbtn"; // styl w CSS
-    btn.onclick = () => (window.location.href = backUrl);
+    btn.className = "arcade-backbtn";
+    btn.onclick = () => {
+      window.location.href = backUrl;
+    };
     document.body.appendChild(btn);
   }
 
-  // -------------------------------
-  // API Publiczne
-  // -------------------------------
-
   return {
-    async initIndex({ onReady }) {
-      createClient();
-
-      renderTopBar(document.body);
-
-      if (typeof onReady === "function") onReady();
+    initIndex() {
+      renderTopBar();
     },
 
     async initGame({ gameId, backUrl }) {
-      createClient();
+      renderTopBar();
 
       const params = new URLSearchParams(window.location.search);
-      const isFS = params.get("fullscreen") === "1";
-
-      // topbar nad grą
-      renderTopBar(document.body);
-
-      if (isFS) injectBackButton(backUrl);
+      const isFullscreen = params.get("fullscreen") === "1";
+      if (isFullscreen) {
+        injectBackButton(backUrl);
+      }
 
       return {
-        saveProgress: (a, b) => saveProgress(a, b),
-        loadProgress: (a) => loadProgress(a)
+        saveProgress: (id, data) => saveProgress(id, data),
+        loadProgress: (id) => loadProgress(id)
       };
     }
   };
