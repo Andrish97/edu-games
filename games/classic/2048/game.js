@@ -450,7 +450,7 @@
 
     // przycisk powrotu do arcade
     if (typeof ArcadeUI !== "undefined" && ArcadeUI.addBackToArcadeButton) {
-      ArcadeUI.addBackToArcadeButton({ backUrl: "../../arcade.html" });
+      ArcadeUI.addBackToArcadeButton({ backUrl: "../../../arcade.html" });
     }
 
     // wczytaj progres użytkownika
