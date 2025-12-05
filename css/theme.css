@@ -1,0 +1,202 @@
+/* css/theme.css */
+/* Ogólny motyw Neon Arcade – tło, karty, przyciski, topbar */
+
+body.arcade-body {
+  background: radial-gradient(circle at top, #1f2933, #020617);
+  color: #e5e7eb;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Główne opakowanie strony */
+.shell {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  box-sizing: border-box;
+}
+
+/* Główna karta */
+.card {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 16px;
+  padding: 20px 22px 22px;
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(148, 163, 184, 0.12);
+  backdrop-filter: blur(8px);
+  box-sizing: border-box;
+}
+
+/* Nagłówek (tytuł + podtytuł) */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* Przyciski – bazowe */
+.btn {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    filter 0.08s ease;
+  white-space: nowrap;
+}
+
+.btn-main {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #052e16;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.5);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  color: #0b1120;
+  box-shadow: 0 8px 18px rgba(56, 189, 248, 0.5);
+}
+
+.btn-ghost {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: #f9fafb;
+  box-shadow: 0 8px 18px rgba(107, 114, 128, 0.5);
+}
+
+.btn-link {
+  background: transparent;
+  color: #9ca3af;
+  box-shadow: none;
+  padding: 0;
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+/* Efekty hover dla przycisków głównych */
+.btn-main:hover,
+.btn-secondary:hover,
+.btn-ghost:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+/* Pasek na górze (topbar) */
+.arcade-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(148, 163, 184, 0.2);
+  backdrop-filter: blur(10px);
+  box-sizing: border-box;
+}
+
+.arcade-user {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.arcade-auth {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.arcade-input {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 12px;
+}
+
+.arcade-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #052e16;
+  box-shadow: 0 6px 14px rgba(22, 163, 74, 0.45);
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.06s ease,
+    filter 0.08s ease;
+}
+
+.arcade-btn.logout {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.45);
+}
+
+.arcade-btn.guest {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  box-shadow: 0 6px 14px rgba(107, 114, 128, 0.45);
+}
+
+.arcade-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+/* Przycisk "Powrót do Arcade" dla gier */
+.arcade-backbtn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #052e16;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.5);
+  z-index: 40;
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.06s ease,
+    filter 0.08s ease;
+}
+
+.arcade-backbtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(22, 163, 74, 0.65);
+  filter: brightness(1.05);
+}
