@@ -7,15 +7,20 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/login.css">
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core/auth.js"></script>
+  <!-- Supabase z CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+
+  <!-- Core auth -->
+  <script src="js/core/auth.js" defer></script>
+
+  <!-- Logika tej strony -->
   <script src="js/pages/index.js" defer></script>
 </head>
 <body class="arcade-body">
   <div class="shell login-shell">
     <div class="card login-card">
       <div class="login-title">Neon Arcade</div>
-      <div class="login-subtitle">
+      <div class="login-subtitle" id="subtitle">
         Zaloguj się albo wejdź jako gość.
       </div>
 
@@ -25,8 +30,10 @@
       <div class="login-label">Hasło</div>
       <input id="pass" type="password" class="login-input" placeholder="••••••••">
 
-      <div class="login-label">Powtórz hasło (tylko przy rejestracji)</div>
-      <input id="pass2" type="password" class="login-input" placeholder="••••••••">
+      <div class="login-label" id="label-pass2" style="display:none;">
+        Powtórz hasło
+      </div>
+      <input id="pass2" type="password" class="login-input" placeholder="••••••••" style="display:none;">
 
       <div class="login-row">
         <button id="btn-login" class="btn btn-main">Zaloguj</button>
