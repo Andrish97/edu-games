@@ -41,18 +41,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 1) Na start ustawiamy domyślnie tryb logowania
+  // 1) Start: domyślnie tryb logowania
   updateModeUI();
 
-  // 2) Sprawdź, czy wróciliśmy z aktywacji konta (np. type=signup od Supabase)
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("activated") === "1" || params.get("type") === "signup") {
+  // 2) Sprawdź, czy wróciliśmy z aktywacji konta (Supabase używa hash #...)
+  // np. URL wygląda tak:
+  // https://andrish97.github.io/neon-arcade/#access_token=...&type=signup
+  const hash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const hashParams = new URLSearchParams(hash);
+
+  const searchParams = new URLSearchParams(window.location.search);
+
+  const typeFromHash   = hashParams.get("type");
+  const activatedToken = hashParams.get("access_token");
+  const activatedFlag  = searchParams.get("activated");
+
+  const cameFromSignup =
+    (activatedToken && typeFromHash === "signup") ||
+    activatedFlag === "1";
+
+  if (cameFromSignup) {
     registerMode = false;
-    updateModeUI(); // upewnij się, że jesteśmy w trybie logowania
+    updateModeUI(); // na wszelki wypadek wracamy do logowania
     subtitleEl.textContent = "Konto aktywowane. Możesz się zalogować.";
     showError("");
 
-    // Opcjonalnie usuń parametry z URL, żeby po odświeżeniu nie pokazywać tego ponownie
+    // usuń hash / query z URL (żeby po odświeżeniu nie pokazywało ponownie)
     history.replaceState({}, "", window.location.pathname);
   }
 
@@ -148,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const { error } = await ArcadeAuth.resetPassword(
       email,
-      window.location.origin + "/arcade.html"
+      window.location.origin + window.location.pathname.replace(/index\.html$/, "") + "index.html"
     );
     if (error) {
       showError("Nie udało się wysłać maila: " + error.message);
