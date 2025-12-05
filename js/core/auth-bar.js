@@ -32,7 +32,13 @@
           <button class="arcade-btn logout auth-logout" style="display:none">
             Wyloguj
           </button>
-          <button class="arcade-btn auth-forgot">Przypomnij hasło</button>
+          <span
+            class="auth-forgot"
+            style="cursor:pointer;font-size:11px;opacity:0.8;margin-left:8px;"
+          >
+            Przypomnij hasło
+          </span>
+
 
           <span class="auth-error" style="margin-left:8px;font-size:11px;color:#fca5a5;"></span>
         </div>
