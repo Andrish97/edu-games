@@ -15,24 +15,17 @@
         <div>
           <div class="title">Neon Arcade</div>
           <div class="subtitle">
-            Wybierz kategorię, a potem grę. Każda uruchamia się na całe okno, wrócisz przyciskiem „Powrót do Arcade”.
+            Wybierz grę i zanurz się w neonie.
           </div>
         </div>
       </div>
 
       <div class="categories-row" id="categories"></div>
       <div id="games"></div>
-
-      <div class="hint">
-        Gry są generowane automatycznie z list w JavaScript. Żeby dodać nową:
-        dodaj plik <code>.html</code> i dopisz pozycję do odpowiedniej tablicy
-        (<code>CLASSIC_GAMES</code> lub <code>LANGUAGE_GAMES</code>).
-      </div>
     </div>
   </div>
 
   <script>
-    // 👇 Gry klasyczne – w folderze classic/
     const CLASSIC_GAMES = [
       {
         id: "snake",
@@ -40,7 +33,7 @@
         name: "Snake",
         icon: "🐍",
         thumb: "img/snake.png",
-        description: "Klasyczny wąż w neonowym wydaniu: przechodzi przez ściany i przyśpiesza po zjedzeniu jabłka."
+        description: "Klasyczny wąż w neonowym wydaniu."
       },
       {
         id: "tetris",
@@ -48,7 +41,7 @@
         name: "Tetris",
         icon: "🧱",
         thumb: "img/tetris.png",
-        description: "Neonowe klocki, ghost piece, poziomy i przyspieszanie. Klasyk w pikselowym garniturze."
+        description: "Układaj klocki, żeby nie sięgnęły sufitu."
       },
       {
         id: "saper",
@@ -56,7 +49,7 @@
         name: "Saper",
         icon: "💣",
         thumb: "img/saper.png",
-        description: "Minesweeper: różne rozmiary planszy, proporcjonalna liczba min, pierwsze kliknięcie zawsze bezpieczne."
+        description: "Odkrywaj pola, unikaj min."
       },
       {
         id: "wordl",
@@ -64,7 +57,7 @@
         name: "Wordl PL",
         icon: "🔤",
         thumb: "img/wordl.png",
-        description: "Polski Wordle: zgadnij słowo 4–7 liter, słownik z internetu, kolorowe podpowiedzi jak w oryginale."
+        description: "Zgadnij słowo na litery."
       },
       {
         id: "2048",
@@ -72,7 +65,7 @@
         name: "2048",
         icon: "🔢",
         thumb: "img/2048.png",
-        description: "Płynne, animowane 2048 z neonowymi kafelkami i lokalnym rekordem."
+        description: "Łącz liczby, aż dojdziesz do 2048."
       },
       {
         id: "pong",
@@ -80,11 +73,10 @@
         name: "Pong",
         icon: "🏓",
         thumb: "img/pong.png",
-        description: "Neonowy Pong z płynną piłką, prostym AI i sterowaniem W/S lub strzałkami."
+        description: "Odbijaj piłkę szybciej niż przeciwnik."
       }
     ];
 
-    // 👇 Gry językowe – w folderze language/
     const LANGUAGE_GAMES = [
       {
         id: "znajdz_slowo",
@@ -92,21 +84,20 @@
         name: "Znajdź słowo",
         icon: "📖",
         thumb: null,
-        description: "Szukaj słów pasujących do obrazków. Światy tematyczne, levele i punkty za serie poprawnych odpowiedzi."
+        description: "Dobieraj słowa do obrazków."
       }
     ];
 
-    // Kategorie – meta
     const CATEGORIES = [
       {
         id: "classic",
-        name: "Gry klasyczne",
+        name: "Klasyki",
         icon: "🎮",
         games: CLASSIC_GAMES
       },
       {
         id: "language",
-        name: "Gry językowe",
+        name: "Językowe",
         icon: "🗣️",
         games: LANGUAGE_GAMES
       }
@@ -153,7 +144,7 @@
 
       const footer = document.createElement("div");
       footer.className = "game-footer";
-      footer.innerHTML = `<span class="pill">HTML / Canvas</span>`;
+      footer.innerHTML = `<span class="pill">Gra</span>`;
 
       const play = document.createElement("button");
       play.className = "play-btn";
@@ -215,9 +206,10 @@
         renderGamesForCategory(first.dataset.catId);
       }
     }
+
     document.addEventListener("DOMContentLoaded", () => {
-      ArcadeCore.initIndex();  // wstawi pasek u góry
-      renderCategories();      // Twoja funkcja od listy gier
+      ArcadeCore.initIndex();   // pasek u góry
+      renderCategories();       // lista gier
     });
   </script>
 </body>
