@@ -41,20 +41,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 1) Na start ustawiamy domyślnie tryb logowania
+  // 1) Start: domyślnie tryb logowania
   updateModeUI();
 
-  // 2) Sprawdź, czy wróciliśmy z aktywacji konta (np. type=signup od Supabase)
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("activated") === "1" || params.get("type") === "signup") {
-    registerMode = false;
-    updateModeUI(); // upewnij się, że jesteśmy w trybie logowania
-    subtitleEl.textContent = "Konto aktywowane. Możesz się zalogować.";
-    showError("");
+  // 2) Sprawdź, czy weszliśmy z linka aktywacyjnego Supabase
+  // Supabase daje coś w stylu:
+  //   https://andrish97.github.io/twoje-repo/#access_token=...&type=signup
+  //
+  // Nie bawimy się w weryfikację tokena – to już zrobił backend.
+  // Jeśli widzimy type=signup w hash, to po prostu pokazujemy komunikat: "możesz się zalogować".
+  (function checkSignupFromHash() {
+    const rawHash = window.location.hash || "";
+    const hash = rawHash.startsWith("#") ? rawHash.slice(1) : rawHash;
+    if (!hash) return;
 
-    // Opcjonalnie usuń parametry z URL, żeby po odświeżeniu nie pokazywać tego ponownie
-    history.replaceState({}, "", window.location.pathname);
-  }
+    const hashParams = new URLSearchParams(hash);
+    const type = hashParams.get("type");
+
+    if (type === "signup") {
+      registerMode = false;
+      updateModeUI();
+      subtitleEl.textContent = "Konto aktywowane. Możesz się zalogować.";
+      showError("");
+
+      // Sprzątanie: usuń hash z paska adresu, żeby po odświeżeniu nie mielić tego znów
+      history.replaceState({}, "", window.location.pathname);
+    }
+  })();
 
   // Gość
   btnGuest.onclick = () => {
@@ -146,9 +159,11 @@ document.addEventListener("DOMContentLoaded", () => {
       showError("Podaj email, na który wysłać link.");
       return;
     }
+
     const { error } = await ArcadeAuth.resetPassword(
       email,
-      window.location.origin + "/arcade.html"
+      // przekierowanie po kliknięciu w maila z resetem
+      window.location.origin + window.location.pathname.replace(/index\.html$/, "") + "index.html"
     );
     if (error) {
       showError("Nie udało się wysłać maila: " + error.message);
