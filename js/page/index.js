@@ -12,7 +12,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const subtitleEl   = document.getElementById("subtitle");
 
   let registerMode = false; // false = logowanie, true = rejestracja
+  // Czy wróciliśmy z aktywacji konta (maile supabase)?
+  const params = new URLSearchParams(window.location.search);
 
+  if (params.get("activated") === "1" || params.get("type") === "signup") {
+    registerMode = false;
+    updateModeUI();
+    subtitleEl.textContent = "Konto aktywowane. Możesz się zalogować.";
+    showError("");
+
+    // opcjonalnie usuń parametry z URL, żeby po odświeżeniu nie wyświetlało ponownie
+    history.replaceState({}, "", window.location.pathname);
+  }
   function showError(msg) {
     errorBox.textContent = msg || "";
   }
@@ -112,8 +123,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    alert("Konto utworzone. Sprawdź maila, żeby aktywować konto.");
-    goToArcade();
+    alert("Konto utworzone. Sprawdź maila, żeby aktywować konto, a potem zaloguj się tutaj.");
+    
+    // wróć do trybu logowania
+    registerMode = false;
+    updateModeUI();
+    
+    // wyczyść hasła, żeby nie zostały w inputach
+    passInput.value = "";
+    pass2Input.value = "";
+    
+    // NIE przełączaj na arcade, NIE ustawiaj od razu trybu user
+    // localStorage.setItem("arcade_mode", "user"); // to usuwamy
+    // goToArcade(); // to usuwamy
+
   };
 
   // Przypomnienie hasła
