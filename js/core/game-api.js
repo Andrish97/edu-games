@@ -1,11 +1,10 @@
-
 // js/core/game-api.js
 // Proste API do ładowania listy gier z games.json + meta.json każdej gry.
 
-(async function () {
+(function () {
   async function fetchJSON(url) {
     const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status + " przy pobieraniu " + url);
+    if (!res.ok) throw new Error("Nie udało się pobrać " + url);
     return await res.json();
   }
 
@@ -14,13 +13,7 @@
    * Zwraca obiekt { categories: [...] }
    */
   async function loadGamesConfig() {
-    try {
-      return await fetchJSON("games.json"); // albo "games-api/games.json"
-    } catch (e) {
-      console.error("[ArcadeGameAPI] Problem z games.json:", e);
-      // zamiast wywalać wszystko → pusta lista kategorii
-      return { categories: [] };
-    }
+    return await fetchJSON("games.json");
   }
 
   /**
