@@ -13,7 +13,7 @@
   <!-- Core auth -->
   <script src="js/core/auth.js" defer></script>
 
-  <!-- Logika tej strony -->
+  <!-- Logika tej strony (ta z nową obsługą aktywacji itd.) -->
   <script src="js/pages/index.js" defer></script>
 </head>
 <body class="arcade-body">
@@ -36,13 +36,13 @@
       <input id="pass2" type="password" class="login-input" placeholder="••••••••" style="display:none;">
 
       <div class="login-row">
-        <button id="btn-login" class="btn btn-main">Zaloguj</button>
-        <button id="btn-register" class="btn btn-secondary">Załóż konto</button>
+        <button id="btn-login" class="btn btn-main" type="button">Zaloguj</button>
+        <button id="btn-register" class="btn btn-secondary" type="button">Załóż konto</button>
       </div>
 
-      <button id="btn-forgot" class="btn btn-link">Przypomnij hasło</button>
+      <button id="btn-forgot" class="btn btn-link" type="button">Przypomnij hasło</button>
 
-      <button id="btn-guest" class="btn btn-ghost" style="width:100%;margin-top:8px;">
+      <button id="btn-guest" class="btn btn-ghost" type="button" style="width:100%;margin-top:8px;">
         Graj jako gość
       </button>
 
