@@ -296,3 +296,116 @@ body.arcade-body {
   transform: translateY(-1px);
   filter: brightness(1.08);
 }
+
+
+/* Ekran logowania / startowy */
+.arcade-login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arcade-login-card {
+  max-width: 380px;
+  width: 100%;
+}
+.arcade-login-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.arcade-login-subtitle {
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.arcade-login-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: #9ca3af;
+  margin-bottom: 4px;
+  margin-top: 8px;
+}
+.arcade-login-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.6);
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 13px;
+}
+.arcade-login-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+.arcade-btn-main,
+.arcade-btn-secondary,
+.arcade-btn-ghost,
+.arcade-btn-link {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.08s ease;
+  white-space: nowrap;
+}
+.arcade-btn-main {
+  flex: 1;
+  background: linear-gradient(135deg,#22c55e,#16a34a);
+  color: #052e16;
+  box-shadow: 0 8px 18px rgba(22,163,74,0.5);
+}
+.arcade-btn-secondary {
+  flex: 1;
+  background: linear-gradient(135deg,#38bdf8,#0ea5e9);
+  color: #0b1120;
+  box-shadow: 0 8px 18px rgba(56,189,248,0.5);
+}
+.arcade-btn-ghost {
+  width: 100%;
+  background: linear-gradient(135deg,#6b7280,#4b5563);
+  color: #f9fafb;
+  box-shadow: 0 8px 18px rgba(107,114,128,0.5);
+  margin-top: 8px;
+}
+.arcade-btn-main:hover,
+.arcade-btn-secondary:hover,
+.arcade-btn-ghost:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+.arcade-btn-link {
+  background: transparent;
+  color: #9ca3af;
+  box-shadow: none;
+  padding: 0;
+  font-size: 12px;
+  margin-top: 2px;
+  text-decoration: underline;
+}
+.arcade-login-error {
+  font-size: 12px;
+  color: #f97373;
+  margin-top: 6px;
+  min-height: 16px;
+  text-align: center;
+}
+.arcade-login-hint {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 10px;
+  text-align: center;
+  line-height: 1.4;
+}
