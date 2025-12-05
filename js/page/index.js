@@ -12,18 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const subtitleEl   = document.getElementById("subtitle");
 
   let registerMode = false; // false = logowanie, true = rejestracja
-  // Czy wróciliśmy z aktywacji konta (maile supabase)?
-  const params = new URLSearchParams(window.location.search);
 
-  if (params.get("activated") === "1" || params.get("type") === "signup") {
-    registerMode = false;
-    updateModeUI();
-    subtitleEl.textContent = "Konto aktywowane. Możesz się zalogować.";
-    showError("");
-
-    // opcjonalnie usuń parametry z URL, żeby po odświeżeniu nie wyświetlało ponownie
-    history.replaceState({}, "", window.location.pathname);
-  }
   function showError(msg) {
     errorBox.textContent = msg || "";
   }
@@ -50,6 +39,21 @@ document.addEventListener("DOMContentLoaded", () => {
       subtitleEl.textContent = "Zaloguj się albo wejdź jako gość.";
       showError("");
     }
+  }
+
+  // 1) Na start ustawiamy domyślnie tryb logowania
+  updateModeUI();
+
+  // 2) Sprawdź, czy wróciliśmy z aktywacji konta (np. type=signup od Supabase)
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("activated") === "1" || params.get("type") === "signup") {
+    registerMode = false;
+    updateModeUI(); // upewnij się, że jesteśmy w trybie logowania
+    subtitleEl.textContent = "Konto aktywowane. Możesz się zalogować.";
+    showError("");
+
+    // Opcjonalnie usuń parametry z URL, żeby po odświeżeniu nie pokazywać tego ponownie
+    history.replaceState({}, "", window.location.pathname);
   }
 
   // Gość
@@ -124,19 +128,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     alert("Konto utworzone. Sprawdź maila, żeby aktywować konto, a potem zaloguj się tutaj.");
-    
+
     // wróć do trybu logowania
     registerMode = false;
     updateModeUI();
-    
+
     // wyczyść hasła, żeby nie zostały w inputach
     passInput.value = "";
     pass2Input.value = "";
-    
-    // NIE przełączaj na arcade, NIE ustawiaj od razu trybu user
-    // localStorage.setItem("arcade_mode", "user"); // to usuwamy
-    // goToArcade(); // to usuwamy
-
   };
 
   // Przypomnienie hasła
@@ -157,7 +156,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     alert("Jeśli konto istnieje, wyślemy mail z linkiem do ustawienia nowego hasła.");
   };
-
-  // Na start ustawiamy tryb logowania
-  updateModeUI();
 });
