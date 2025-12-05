@@ -2,31 +2,51 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <title>Neon Arcade</title>
+  <title>Neon Arcade – gry</title>
 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Główny motyw + styl strony arcade -->
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/arcade.css">
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core/auth.js"></script>
-  <script src="js/core/ui.js"></script>
-  <script src="js/core/games-api.js"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+
+  <!-- Wspólna logika autoryzacji (ArcadeAuth + ArcadeAuthUI) -->
+  <script src="js/core/auth.js" defer></script>
+
+  <!-- Pasek logowania oparty na ArcadeAuthUI -->
+  <script src="js/core/auth-bar.js" defer></script>
+
+  <!-- Logika strony arcade: wczytywanie gier, kategorii itd. -->
   <script src="js/pages/arcade.js" defer></script>
 </head>
 <body class="arcade-body">
-  <div class="shell" id="arcade-main">
-    <div class="card">
+  <div class="shell">
+    <div class="card arcade-card">
+
+      <!-- UNIWERSALNY PASEK – automatycznie tworzony przez auth-bar.js -->
+      <div
+        data-arcade-auth-bar
+        <!-- tu w arcade NIE przekierowujemy po logowaniu, więc bez data-after-login -->
+      ></div>
+
       <div class="header">
         <div>
           <div class="title">Neon Arcade</div>
           <div class="subtitle">
-            Wybierz grę i zanurz się w neonie.
+            Wybierz kategorię i zagraj. Twoje wyniki mogą zapisywać się lokalnie lub w chmurze (po zalogowaniu).
           </div>
         </div>
       </div>
 
+      <!-- Pasek kategorii -->
       <div class="categories-row" id="categories"></div>
+
+      <!-- Kontener na gry w wybranej kategorii -->
       <div id="games"></div>
+
     </div>
   </div>
 </body>
