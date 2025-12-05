@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Neon Wordl PL</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top, #1f2933, #020617);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      padding: 16px 20px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.8),
+                  0 0 0 1px rgba(148,163,184,0.12);
+      backdrop-filter: blur(8px);
+      max-width: 420px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #status {
+      height: 20px;
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #9ca3af;
+    }
+
+    #board {
+      display: grid;
+      gap: 4px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .tile {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid rgba(148,163,184,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: #020617;
+      color: #e5e7eb;
+      box-sizing: border-box;
+      transition: 0.1s;
+    }
+
+    .tile.filled { transform: scale(1.06); border-color: rgba(148,163,184,0.7); }
+    .tile.correct { background: #22c55e; color: #022c22; border-color:#22c55e; }
+    .tile.present { background: #facc15; color: #422006; border-color:#facc15; }
+    .tile.absent  { background: #1e293b; border-color:#475569; color:#64748b; }
+
+    select, button {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      font-size: 14px;
+    }
+
+    button {
+      margin-top: 10px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #052e16;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+  </style>
+</head>
+<body>
+	<script>
+	(function() {
+	  // jeśli gra została otwarta jako fullscreen (z index.html)
+	  const params = new URLSearchParams(window.location.search);
+	  const isFullscreen = params.get("fullscreen") === "1";
+
+	  if (!isFullscreen) return;
+
+	  const btn = document.createElement("button");
+	  btn.textContent = "Powrót do Arcade";
+	  btn.style.position = "fixed";
+	  btn.style.top = "20px";
+	  btn.style.left = "20px";
+	  btn.style.padding = "8px 16px";
+	  btn.style.border = "none";
+	  btn.style.borderRadius = "999px";
+	  btn.style.cursor = "pointer";
+	  btn.style.zIndex = "9999";
+	  btn.style.fontSize = "14px";
+	  btn.style.fontWeight = "600";
+	  btn.style.background = "linear-gradient(135deg,#22c55e,#16a34a)";
+	  btn.style.color = "#052e16";
+	  btn.style.boxShadow = "0 8px 18px rgba(22,163,74,0.45)";
+	  btn.style.transition = "transform 0.06s ease, box-shadow 0.06s ease";
+
+	  btn.onmouseover = () => {
+		btn.style.transform = "translateY(-1px)";
+		btn.style.boxShadow = "0 12px 26px rgba(22,163,74,0.6)";
+	  };
+	  btn.onmouseout = () => {
+		btn.style.transform = "translateY(0)";
+		btn.style.boxShadow = "0 8px 18px rgba(22,163,74,0.45)";
+	  };
+
+	  btn.onclick = () => {
+		// wraca do index.html niezależnie co to za gra i skąd
+		window.location.href = "../index.html";
+	  };
+
+	  document.body.appendChild(btn);
+	})();
+	</script>
+
+  <div class="card">
+
+    <div id="status">Ładowanie słownika...</div>
+
+    <select id="word-len">
+      <option value="5">Słowo 5-literowe (klasyczne)</option>
+      <option value="4">4 litery</option>
+      <option value="6">6 liter</option>
+      <option value="7">7 liter</option>
+    </select>
+
+    <div id="board"></div>
+    <button id="restart">Nowe słowo</button>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const boardEl = document.getElementById("board");
+    const restartBtn = document.getElementById("restart");
+    const wordLenSel = document.getElementById("word-len");
+
+    let allWords = [];
+    let validWords = [];
+    let usedWords = new Set();
+    let secret = "";
+    let row = 0;
+    let col = 0;
+    let board = [];
+    let wordLength = 5;
+    const maxRows = 6;
+
+    // pobieramy polski słownik
+    const DICT_URL =
+      "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/pl/pl_full.txt";
+
+    function normalize(w) {
+      return w
+        .toLowerCase()
+        .replace(/[^a-ząćęłńóśżź]/g, "");  // tylko litery PL
+    }
+
+    async function loadDictionary() {
+      statusEl.textContent = "Pobieram słownik...";
+      const resp = await fetch(DICT_URL);
+      const text = await resp.text();
+      const lines = text.split("\n").map(x => normalize(x.split(" ")[0]));
+      allWords = [...new Set(lines)].filter(w => w.length >= 4 && w.length <= 7);
+      statusEl.textContent = "Gotowe!";
+    }
+
+    function chooseSecret() {
+      validWords = allWords.filter(w => w.length === wordLength);
+      let w;
+      do {
+        w = validWords[Math.floor(Math.random() * validWords.length)];
+      } while (usedWords.has(w));
+      usedWords.add(w);
+      return w;
+    }
+
+    function initBoard() {
+      boardEl.innerHTML = "";
+      boardEl.style.gridTemplateColumns = `repeat(${wordLength}, 40px)`;
+      board = [];
+
+      for (let r = 0; r < maxRows; r++) {
+        const row = [];
+        for (let c = 0; c < wordLength; c++) {
+          const div = document.createElement("div");
+          div.className = "tile";
+          boardEl.appendChild(div);
+          row.push(div);
+        }
+        board.push(row);
+      }
+    }
+
+    function newGame() {
+      wordLength = parseInt(wordLenSel.value);
+      secret = chooseSecret();
+      initBoard();
+      row = 0;
+      col = 0;
+      statusEl.textContent = "Zgadnij słowo!";
+    }
+
+    function colorRow(r) {
+      const guess = [];
+      for (let c = 0; c < wordLength; c++) {
+        guess[c] = board[r][c].textContent.toLowerCase();
+      }
+      const secretArr = secret.split("");
+      const used = Array(wordLength).fill(false);
+
+      // zielone (dokładne)
+      for (let c = 0; c < wordLength; c++) {
+        if (guess[c] === secret[c]) {
+          board[r][c].classList.add("correct");
+          used[c] = true;
+        }
+      }
+      // żółte (w słowie, ale nie tu)
+      for (let c = 0; c < wordLength; c++) {
+        if (board[r][c].classList.contains("correct")) continue;
+        const idx = secretArr.findIndex((ch, i) => ch === guess[c] && !used[i]);
+        if (idx !== -1) {
+          board[r][c].classList.add("present");
+          used[idx] = true;
+        } else {
+          board[r][c].classList.add("absent");
+        }
+      }
+    }
+
+    function submitRow() {
+      let guess = "";
+      for (let c = 0; c < wordLength; c++) {
+        guess += board[row][c].textContent.toLowerCase();
+      }
+      if (guess.length !== wordLength) return;
+      if (!validWords.includes(guess)) {
+        statusEl.textContent = "Nie ma takiego słowa!";
+        return;
+      }
+
+      colorRow(row);
+
+      if (guess === secret) {
+        statusEl.textContent = "Brawo! Trafione!";
+        row = maxRows;
+        return;
+      }
+
+      row++;
+      col = 0;
+
+      if (row >= maxRows) {
+        statusEl.textContent = "Koniec! Słowo: " + secret.toUpperCase();
+      }
+    }
+
+    function pressLetter(ch) {
+      if (row >= maxRows) return;
+      if (col >= wordLength) return;
+      board[row][col].textContent = ch.toUpperCase();
+      board[row][col].classList.add("filled");
+      col++;
+    }
+
+    function erase() {
+      if (col > 0) {
+        col--;
+        board[row][col].textContent = "";
+        board[row][col].classList.remove("filled");
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      statusEl.textContent = "";
+
+      if (e.key === "Enter") {
+        submitRow();
+        return;
+      }
+      if (e.key === "Backspace") {
+        erase();
+        return;
+      }
+      if (/^[a-ząćęłńóśżź]$/i.test(e.key)) {
+        pressLetter(e.key.toLowerCase());
+      }
+    });
+
+    restartBtn.onclick = newGame;
+
+    // Start gry
+    loadDictionary().then(newGame);
+
+  </script>
+</body>
+</html>

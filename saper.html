@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Neon Minesweeper</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top, #1f2933, #020617);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      padding: 16px 20px 18px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(148, 163, 184, 0.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      backdrop-filter: blur(8px);
+    }
+
+    .top-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #cbd5f5;
+    }
+
+    .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #9ca3af;
+    }
+
+    .value {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    #game {
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: #020617;
+      image-rendering: pixelated;
+      max-width: 90vw;
+      max-height: 70vh;
+    }
+
+    #info {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    #info b {
+      color: #e5e7eb;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 6px 14px;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #052e16;
+      box-shadow: 0 8px 18px rgba(22, 163, 74, 0.45);
+      transition: transform 0.06s ease, box-shadow 0.06s ease, filter 0.08s;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(22, 163, 74, 0.6);
+      filter: brightness(1.05);
+    }
+
+    button:active {
+      transform: translateY(0px) scale(0.98);
+      box-shadow: 0 6px 14px rgba(22, 163, 74, 0.45);
+      filter: brightness(0.97);
+    }
+
+    select {
+      margin-top: 2px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      font-size: 13px;
+      outline: none;
+    }
+
+    select:focus {
+      box-shadow: 0 0 0 1px #22c55e;
+      border-color: #22c55e;
+    }
+  </style>
+</head>
+<body>
+	<script>
+	(function() {
+	  // jeśli gra została otwarta jako fullscreen (z index.html)
+	  const params = new URLSearchParams(window.location.search);
+	  const isFullscreen = params.get("fullscreen") === "1";
+
+	  if (!isFullscreen) return;
+
+	  const btn = document.createElement("button");
+	  btn.textContent = "Powrót do Arcade";
+	  btn.style.position = "fixed";
+	  btn.style.top = "20px";
+	  btn.style.left = "20px";
+	  btn.style.padding = "8px 16px";
+	  btn.style.border = "none";
+	  btn.style.borderRadius = "999px";
+	  btn.style.cursor = "pointer";
+	  btn.style.zIndex = "9999";
+	  btn.style.fontSize = "14px";
+	  btn.style.fontWeight = "600";
+	  btn.style.background = "linear-gradient(135deg,#22c55e,#16a34a)";
+	  btn.style.color = "#052e16";
+	  btn.style.boxShadow = "0 8px 18px rgba(22,163,74,0.45)";
+	  btn.style.transition = "transform 0.06s ease, box-shadow 0.06s ease";
+
+	  btn.onmouseover = () => {
+		btn.style.transform = "translateY(-1px)";
+		btn.style.boxShadow = "0 12px 26px rgba(22,163,74,0.6)";
+	  };
+	  btn.onmouseout = () => {
+		btn.style.transform = "translateY(0)";
+		btn.style.boxShadow = "0 8px 18px rgba(22,163,74,0.45)";
+	  };
+
+	  btn.onclick = () => {
+		// wraca do index.html niezależnie co to za gra i skąd
+		window.location.href = "../index.html";
+	  };
+
+	  document.body.appendChild(btn);
+	})();
+	</script>
+  <div class="card">
+    <div class="top-bar">
+      <div>
+        <div class="label">Mines</div>
+        <div class="value" id="mines-count">10</div>
+      </div>
+      <div>
+        <div class="label">Flags left</div>
+        <div class="value" id="flags-left">10</div>
+      </div>
+      <div>
+        <div class="label">Time</div>
+        <div class="value" id="time">0</div>
+      </div>
+    </div>
+
+    <div class="top-bar" style="margin-top: -2px; margin-bottom: 10px; align-items: flex-end;">
+      <div>
+        <div class="label">Board size</div>
+        <select id="size-select">
+          <option value="small">Small 9×9</option>
+          <option value="medium" selected>Medium 16×16</option>
+          <option value="large">Large 30×16</option>
+        </select>
+      </div>
+      <div></div>
+      <div></div>
+    </div>
+
+    <!-- canvas rozmiar będzie ustawiany w JS -->
+    <canvas id="game" width="320" height="320"></canvas>
+
+    <div id="info">
+      <div><b>Left click</b> reveal, <b>Right click</b> flag.</div>
+      <div>First click is always safe. Change board size above, then <b>Restart</b>.</div>
+    </div>
+    <button id="restart">Restart</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const minesEl = document.getElementById("mines-count");
+    const flagsLeftEl = document.getElementById("flags-left");
+    const timeEl = document.getElementById("time");
+    const restartBtn = document.getElementById("restart");
+    const sizeSelect = document.getElementById("size-select");
+
+    // rozmiar kafelka stały, tylko zmieniamy liczbę wierszy/kolumn
+    const tileSize = 28;
+
+    // klasyczne rozmiary plansz
+    const SIZES = {
+      small:  { cols: 9,  rows: 9  },    // beginner
+      medium: { cols: 16, rows: 16 },    // intermediate
+      large:  { cols: 30, rows: 16 }     // expert
+    };
+
+    // stała gęstość min (proporcjonalnie do wielkości planszy)
+    const MINE_DENSITY = 0.16; // ok. 16% pól to miny
+
+    let cols = 16;
+    let rows = 16;
+    let numMines = 0;
+
+    let grid;
+    let isGameOver = false;
+    let isWin = false;
+    let isFirstClick = true;
+    let flagsLeft = 0;
+    let revealedCount = 0;
+
+    let timerInterval = null;
+    let seconds = 0;
+
+    const numberColors = {
+      1: "#60a5fa",
+      2: "#4ade80",
+      3: "#f97373",
+      4: "#a855f7",
+      5: "#facc15",
+      6: "#2dd4bf",
+      7: "#fb7185",
+      8: "#9ca3af"
+    };
+
+    function applyBoardSizeFromSelect() {
+      const key = sizeSelect.value;
+      const cfg = SIZES[key] || SIZES.medium;
+      cols = cfg.cols;
+      rows = cfg.rows;
+
+      numMines = Math.max(1, Math.round(cols * rows * MINE_DENSITY));
+      flagsLeft = numMines;
+
+      // dostosuj canvas
+      canvas.width = cols * tileSize;
+      canvas.height = rows * tileSize;
+
+      minesEl.textContent = numMines;
+      flagsLeftEl.textContent = flagsLeft;
+    }
+
+    function createEmptyGrid() {
+      const g = [];
+      for (let y = 0; y < rows; y++) {
+        const row = [];
+        for (let x = 0; x < cols; x++) {
+          row.push({
+            mine: false,
+            revealed: false,
+            flagged: false,
+            adjacent: 0
+          });
+        }
+        g.push(row);
+      }
+      return g;
+    }
+
+    function inBounds(x, y) {
+      return x >= 0 && x < cols && y >= 0 && y < rows;
+    }
+
+    function forEachNeighbor(x, y, fn) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (inBounds(nx, ny)) {
+            fn(nx, ny);
+          }
+        }
+      }
+    }
+
+    function placeMines(excludeX, excludeY) {
+      let placed = 0;
+      while (placed < numMines) {
+        const x = Math.floor(Math.random() * cols);
+        const y = Math.floor(Math.random() * rows);
+
+        if (x === excludeX && y === excludeY) continue;
+        if (grid[y][x].mine) continue;
+
+        grid[y][x].mine = true;
+        placed++;
+      }
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (grid[y][x].mine) {
+            grid[y][x].adjacent = -1;
+            continue;
+          }
+          let count = 0;
+          forEachNeighbor(x, y, (nx, ny) => {
+            if (grid[ny][nx].mine) count++;
+          });
+          grid[y][x].adjacent = count;
+        }
+      }
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      seconds = 0;
+      timeEl.textContent = seconds;
+      timerInterval = setInterval(() => {
+        seconds++;
+        timeEl.textContent = seconds;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function resetGame() {
+      applyBoardSizeFromSelect();
+      grid = createEmptyGrid();
+      isGameOver = false;
+      isWin = false;
+      isFirstClick = true;
+      revealedCount = 0;
+      seconds = 0;
+      stopTimer();
+      timeEl.textContent = seconds;
+      draw();
+    }
+
+    function revealCell(x, y) {
+      const cell = grid[y][x];
+      if (cell.revealed || cell.flagged) return;
+
+      cell.revealed = true;
+      revealedCount++;
+
+      if (cell.mine) {
+        gameOver(false);
+        return;
+      }
+
+      if (cell.adjacent === 0) {
+        forEachNeighbor(x, y, (nx, ny) => {
+          if (!grid[ny][nx].revealed && !grid[ny][nx].flagged && !grid[ny][nx].mine) {
+            revealCell(nx, ny);
+          }
+        });
+      }
+
+      checkWin();
+    }
+
+    function toggleFlag(x, y) {
+      const cell = grid[y][x];
+      if (cell.revealed) return;
+
+      if (cell.flagged) {
+        cell.flagged = false;
+        flagsLeft++;
+      } else {
+        if (flagsLeft <= 0) return;
+        cell.flagged = true;
+        flagsLeft--;
+      }
+      flagsLeftEl.textContent = flagsLeft;
+    }
+
+    function checkWin() {
+      const totalCells = cols * rows;
+      const safeCells = totalCells - numMines;
+      if (revealedCount >= safeCells && !isGameOver) {
+        gameOver(true);
+      }
+    }
+
+    function gameOver(win) {
+      isGameOver = true;
+      isWin = win;
+      stopTimer();
+      drawOverlay();
+    }
+
+    function drawBackground() {
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0, "#020617");
+      grad.addColorStop(1, "#020617");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = 0; x <= cols; x++) {
+        ctx.moveTo(x * tileSize + 0.5, 0);
+        ctx.lineTo(x * tileSize + 0.5, canvas.height);
+      }
+      for (let y = 0; y <= rows; y++) {
+        ctx.moveTo(0, y * tileSize + 0.5);
+        ctx.lineTo(canvas.width, y * tileSize + 0.5);
+      }
+      ctx.stroke();
+    }
+
+    function drawTileBackground(x, y, revealed) {
+      const px = x * tileSize;
+      const py = y * tileSize;
+      const r = 6;
+
+      ctx.beginPath();
+      ctx.moveTo(px + r, py);
+      ctx.lineTo(px + tileSize - r, py);
+      ctx.quadraticCurveTo(px + tileSize, py, px + tileSize, py + r);
+      ctx.lineTo(px + tileSize, py + tileSize - r);
+      ctx.quadraticCurveTo(px + tileSize, py + tileSize, px + tileSize - r, py + tileSize);
+      ctx.lineTo(px + r, py + tileSize);
+      ctx.quadraticCurveTo(px, py + tileSize, px, py + tileSize - r);
+      ctx.lineTo(px, py + r);
+      ctx.quadraticCurveTo(px, py, px + r, py);
+      ctx.closePath();
+
+      if (revealed) {
+        const grad = ctx.createLinearGradient(px, py, px, py + tileSize);
+        grad.addColorStop(0, "#0b1220");
+        grad.addColorStop(1, "#020617");
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(148,163,184,0.35)";
+        ctx.lineWidth = 1.3;
+        ctx.stroke();
+      } else {
+        const grad = ctx.createLinearGradient(px, py, px, py + tileSize);
+        grad.addColorStop(0, "#111827");
+        grad.addColorStop(1, "#020617");
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(15,23,42,0.9)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    function drawMine(x, y, revealed) {
+      const px = x * tileSize + tileSize / 2;
+      const py = y * tileSize + tileSize / 2;
+      const r = tileSize * 0.28;
+
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(239, 68, 68, 0.28)";
+      ctx.arc(px, py, r * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.fillStyle = revealed ? "#f97373" : "#ef4444";
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#020617";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(px - r * 1.2, py);
+      ctx.lineTo(px + r * 1.2, py);
+      ctx.moveTo(px, py - r * 1.2);
+      ctx.lineTo(px, py + r * 1.2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.arc(px - r * 0.4, py - r * 0.4, r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawFlag(x, y) {
+      const px = x * tileSize;
+      const py = y * tileSize;
+
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(px + tileSize * 0.25, py + tileSize * 0.2);
+      ctx.lineTo(px + tileSize * 0.25, py + tileSize * 0.8);
+      ctx.stroke();
+
+      ctx.beginPath();
+      const grad = ctx.createLinearGradient(
+        px + tileSize * 0.25,
+        py + tileSize * 0.2,
+        px + tileSize * 0.8,
+        py + tileSize * 0.5
+      );
+      grad.addColorStop(0, "#f97316");
+      grad.addColorStop(1, "#fb7185");
+      ctx.fillStyle = grad;
+      ctx.moveTo(px + tileSize * 0.25, py + tileSize * 0.2);
+      ctx.lineTo(px + tileSize * 0.75, py + tileSize * 0.35);
+      ctx.lineTo(px + tileSize * 0.25, py + tileSize * 0.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawNumber(x, y, n) {
+      if (n <= 0) return;
+      const px = x * tileSize + tileSize / 2;
+      const py = y * tileSize + tileSize / 2 + 1;
+
+      ctx.fillStyle = numberColors[n] || "#e5e7eb";
+      ctx.font = "bold 16px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(n, px, py);
+    }
+
+    function draw() {
+      drawBackground();
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const cell = grid[y][x];
+
+          drawTileBackground(x, y, cell.revealed);
+
+          if (cell.revealed) {
+            if (cell.mine) {
+              drawMine(x, y, true);
+            } else if (cell.adjacent > 0) {
+              drawNumber(x, y, cell.adjacent);
+            }
+          } else {
+            if (cell.flagged) {
+              drawFlag(x, y);
+            }
+            if (isGameOver && cell.mine && !cell.flagged) {
+              drawMine(x, y, false);
+            }
+          }
+        }
+      }
+
+      if (isGameOver) {
+        drawOverlay();
+      }
+    }
+
+    function drawOverlay() {
+      ctx.fillStyle = "rgba(15,23,42,0.85)";
+      ctx.fillRect(20, canvas.height / 2 - 55, canvas.width - 40, 110);
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#f9fafb";
+      ctx.font = "20px system-ui, sans-serif";
+      ctx.fillText(
+        isWin ? "You cleared the field!" : "Boom! Game Over",
+        canvas.width / 2,
+        canvas.height / 2 - 8
+      );
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillStyle = "#cbd5f5";
+      ctx.fillText("Press Restart to play again", canvas.width / 2, canvas.height / 2 + 18);
+    }
+
+    function getCellFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      const x = Math.floor(mx / tileSize);
+      const y = Math.floor(my / tileSize);
+
+      if (!inBounds(x, y)) return null;
+      return { x, y };
+    }
+
+    canvas.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    });
+
+    canvas.addEventListener("mousedown", (e) => {
+      if (isGameOver) return;
+      const cellPos = getCellFromEvent(e);
+      if (!cellPos) return;
+
+      const { x, y } = cellPos;
+      const cell = grid[y][x];
+
+      if (e.button === 2) {
+        toggleFlag(x, y);
+        draw();
+        return;
+      }
+
+      if (e.button === 0) {
+        if (cell.flagged) return;
+
+        if (isFirstClick) {
+          isFirstClick = false;
+          placeMines(x, y);
+          startTimer();
+        }
+
+        revealCell(x, y);
+        draw();
+      }
+    });
+
+    restartBtn.addEventListener("click", resetGame);
+    sizeSelect.addEventListener("change", () => {
+      resetGame();
+    });
+
+    // Start
+    sizeSelect.value = "medium";
+    resetGame();
+  </script>
+</body>
+</html>

@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Znajdź słowo – światy</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top, #1f2933, #020617);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      padding: 20px 22px 22px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.96);
+      box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(148, 163, 184, 0.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 340px;
+      max-width: 480px;
+      backdrop-filter: blur(8px);
+    }
+
+    .title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #e5e7eb;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+	.worlds-row {
+	  display: flex;
+	  flex-wrap: wrap;          /* ⬅ zamiast przewijania w bok, przyciski zawijają się */
+	  gap: 6px;
+	  margin-bottom: 12px;
+	  width: 100%;
+	}
+
+	.world-btn {
+	  flex: 1 1 calc(50% - 6px);  /* ⬅ dwa przyciski w wierszu */
+	  min-width: 0;
+	  padding: 4px 6px;
+	  border-radius: 999px;
+	  border: 1px solid rgba(148, 163, 184, 0.6);
+	  background: rgba(15, 23, 42, 0.9);
+	  color: #e5e7eb;
+	  cursor: pointer;
+	  font-size: 11px;
+	  font-weight: 500;
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	  gap: 4px;
+	  white-space: nowrap;
+	  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.9);
+	  transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.08s, border-color 0.08s, opacity 0.1s;
+	}
+
+
+    .world-btn span.icon {
+      font-size: 14px;
+    }
+
+    .world-btn.active {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+      border-color: #4ade80;
+      box-shadow: 0 8px 18px rgba(22, 163, 74, 0.55);
+    }
+
+    .world-btn.locked {
+      opacity: 0.4;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .world-btn:hover:not(.locked):not(.active) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.95);
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      font-size: 12px;
+      margin-bottom: 8px;
+      color: #cbd5f5;
+    }
+
+    .streak-info {
+      font-weight: 500;
+    }
+
+    .streak-highlight {
+      color: #4ade80;
+    }
+
+    .progress-wrapper {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      transition: width 0.25s ease;
+    }
+
+    .emoji-box {
+      width: 120px;
+      height: 120px;
+      border-radius: 24px;
+      background: radial-gradient(circle at 30% 20%, #facc15, #f97316 45%, #7c2d12 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      margin-bottom: 16px;
+      box-shadow:
+        0 18px 35px rgba(0, 0, 0, 0.85),
+        0 0 0 1px rgba(248, 250, 252, 0.06);
+    }
+
+    .hint {
+      font-size: 14px;
+      color: #cbd5f5;
+      margin-bottom: 10px;
+      text-align: center;
+      min-height: 18px;
+    }
+
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .choice-btn {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      text-align: center;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.8);
+      transition:
+        transform 0.06s ease,
+        box-shadow 0.06s ease,
+        background 0.08s,
+        border-color 0.08s,
+        filter 0.08s;
+    }
+
+    .choice-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.95);
+      filter: brightness(1.05);
+    }
+
+    .choice-btn:active {
+      transform: translateY(0px) scale(0.98);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.9);
+      filter: brightness(0.96);
+    }
+
+    .choice-btn.correct {
+      background: radial-gradient(circle at top, #22c55e, #16a34a);
+      border-color: #4ade80;
+      color: #022c22;
+    }
+
+    .choice-btn.wrong {
+      background: radial-gradient(circle at top, #f97373, #b91c1c);
+      border-color: #fecaca;
+    }
+
+    .choice-btn.disabled {
+      pointer-events: none;
+      opacity: 0.65;
+    }
+
+    .shake {
+      animation: shake 0.25s;
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      50% { transform: translateX(4px); }
+      75% { transform: translateX(-3px); }
+      100% { transform: translateX(0); }
+    }
+
+    .bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-top: 12px;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    #score {
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: #e5e7eb;
+    }
+
+    #message {
+      margin-top: 6px;
+      min-height: 24px;
+      font-size: 13px;
+      color: #c4b5fd;
+      text-align: center;
+    }
+
+    button#next {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #052e16;
+      box-shadow: 0 8px 18px rgba(22, 163, 74, 0.45);
+      transition: transform 0.06s ease, box-shadow 0.06s ease, filter 0.08s;
+    }
+
+    button#next:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(22, 163, 74, 0.6);
+      filter: brightness(1.05);
+    }
+
+    button#next:active {
+      transform: translateY(0px) scale(0.98);
+      box-shadow: 0 6px 14px rgba(22, 163, 74, 0.45);
+      filter: brightness(0.97);
+    }
+  </style>
+</head>
+<body>
+
+	<script>
+	(function() {
+	  // jeśli gra została otwarta jako fullscreen (z index.html)
+	  const params = new URLSearchParams(window.location.search);
+	  const isFullscreen = params.get("fullscreen") === "1";
+
+	  if (!isFullscreen) return;
+
+	  const btn = document.createElement("button");
+	  btn.textContent = "Powrót do Arcade";
+	  btn.style.position = "fixed";
+	  btn.style.top = "20px";
+	  btn.style.left = "20px";
+	  btn.style.padding = "8px 16px";
+	  btn.style.border = "none";
+	  btn.style.borderRadius = "999px";
+	  btn.style.cursor = "pointer";
+	  btn.style.zIndex = "9999";
+	  btn.style.fontSize = "14px";
+	  btn.style.fontWeight = "600";
+	  btn.style.background = "linear-gradient(135deg,#22c55e,#16a34a)";
+	  btn.style.color = "#052e16";
+	  btn.style.boxShadow = "0 8px 18px rgba(22,163,74,0.45)";
+	  btn.style.transition = "transform 0.06s ease, box-shadow 0.06s ease";
+
+	  btn.onmouseover = () => {
+		btn.style.transform = "translateY(-1px)";
+		btn.style.boxShadow = "0 12px 26px rgba(22,163,74,0.6)";
+	  };
+	  btn.onmouseout = () => {
+		btn.style.transform = "translateY(0)";
+		btn.style.boxShadow = "0 8px 18px rgba(22,163,74,0.45)";
+	  };
+
+	  btn.onclick = () => {
+		// wraca do index.html niezależnie co to za gra i skąd
+		window.location.href = "../index.html";
+	  };
+
+	  document.body.appendChild(btn);
+	})();
+	</script>
+
+  <div class="card">
+    <div class="title">Znajdź słowo</div>
+
+    <div class="worlds-row" id="worldsRow">
+      <!-- przyciski poziomów wypełni JS -->
+    </div>
+
+    <div class="top-row">
+      <div class="world-name" id="worldNameLabel">Świat: Zwierzęta</div>
+      <div class="streak-info">
+        Seria: <span id="streak">0</span>
+      </div>
+    </div>
+
+    <div class="progress-wrapper">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="emoji-box" id="emoji">🐱</div>
+    <div class="hint" id="hint">
+      Kliknij wyraz, który pasuje do obrazka.
+    </div>
+
+    <div class="choices" id="choices"></div>
+
+    <div id="message"></div>
+
+    <div class="bottom-row">
+      <div id="score">Punkty: 0</div>
+      <button id="next">Następne</button>
+	  <button id="resetProgress" style="
+	    margin-top: 10px;
+	    padding: 6px 14px;
+	    border-radius: 999px;
+	    border: none;
+	    cursor: pointer;
+	    font-size: 12px;
+	    font-weight: 500;
+	    background: linear-gradient(135deg,#ef4444,#dc2626);
+	    color: #fff;
+	    box-shadow: 0 6px 16px rgba(220,38,38,0.45);
+	">Wyczyść postęp</button>
+    </div>
+  </div>
+
+  <script>
+    // Konfiguracja światów / poziomów
+    const QUESTIONS_PER_LEVEL = 6;
+
+    const WORLDS = [
+	  {
+		id: "animals",
+		name: "Zwierzęta",
+		icon: "🐾",
+		hint: "Czytaj nazwy zwierząt i znajdź właściwą.",
+		rounds: [
+		  { emoji: "🐱", correct: "kot", others: ["pies", "mysz"] },
+		  { emoji: "🐶", correct: "pies", others: ["kot", "ryba"] },
+		  { emoji: "🐭", correct: "mysz", others: ["kot", "żaba"] },
+		  { emoji: "🐰", correct: "królik", others: ["pies", "koń"] },
+		  { emoji: "🐹", correct: "chomik", others: ["mysz", "kot"] },
+		  { emoji: "🐷", correct: "świnia", others: ["koza", "krowa"] },
+		  { emoji: "🐮", correct: "krowa", others: ["koza", "owca"] },
+		  { emoji: "🐴", correct: "koń", others: ["pies", "krowa"] },
+		  { emoji: "🐑", correct: "owca", others: ["koza", "kura"] },
+		  { emoji: "🐐", correct: "koza", others: ["owca", "świnia"] },
+		  { emoji: "🐔", correct: "kura", others: ["kaczka", "gęś"] },
+		  { emoji: "🦆", correct: "kaczka", others: ["kura", "gęś"] },
+		  { emoji: "🦢", correct: "łabędź", others: ["kaczka", "gęś"] },
+		  { emoji: "🦊", correct: "lis", others: ["pies", "kot"] },
+		  { emoji: "🐻", correct: "miś", others: ["pies", "kot"] },
+		  { emoji: "🐸", correct: "żaba", others: ["ryba", "mysz"] },
+		  { emoji: "🐟", correct: "ryba", others: ["pies", "kot"] },
+		  { emoji: "🐢", correct: "żółw", others: ["żaba", "ryba"] },
+		  { emoji: "🐝", correct: "pszczoła", others: ["motyl", "biedronka"] },
+		  { emoji: "🦋", correct: "motyl", others: ["pszczoła", "biedronka"] },
+		  { emoji: "🐞", correct: "biedronka", others: ["pszczoła", "mrówka"] },
+		  { emoji: "🐜", correct: "mrówka", others: ["pszczoła", "komar"] }
+		]
+	  },
+	  {
+		id: "food",
+		name: "Jedzenie",
+		icon: "🍎",
+		hint: "Znajdź nazwę owocu lub jedzenia.",
+		rounds: [
+		  { emoji: "🍎", correct: "jabłko", others: ["gruszka", "banan"] },
+		  { emoji: "🍌", correct: "banan", others: ["jabłko", "pomidor"] },
+		  { emoji: "🍐", correct: "gruszka", others: ["jabłko", "marchewka"] },
+		  { emoji: "🍊", correct: "pomarańcza", others: ["cytryna", "jabłko"] },
+		  { emoji: "🍋", correct: "cytryna", others: ["pomarańcza", "truskawka"] },
+		  { emoji: "🍓", correct: "truskawka", others: ["jabłko", "malina"] },
+		  { emoji: "🍇", correct: "winogrono", others: ["jabłko", "banan"] },
+		  { emoji: "🍒", correct: "wiśnia", others: ["truskawka", "śliwka"] },
+		  { emoji: "🥕", correct: "marchewka", others: ["ogórek", "ziemniak"] },
+		  { emoji: "🥒", correct: "ogórek", others: ["marchewka", "sałata"] },
+		  { emoji: "🥔", correct: "ziemniak", others: ["marchewka", "ryż"] },
+		  { emoji: "🍅", correct: "pomidor", others: ["jabłko", "marchewka"] },
+		  { emoji: "🥬", correct: "sałata", others: ["kapusta", "pomidor"] },
+		  { emoji: "🍞", correct: "chleb", others: ["ciasto", "lody"] },
+		  { emoji: "🥐", correct: "rogalik", others: ["chleb", "bułka"] },
+		  { emoji: "🥖", correct: "bagietka", others: ["bułka", "chleb"] },
+		  { emoji: "🧀", correct: "ser", others: ["chleb", "masło"] },
+		  { emoji: "🥚", correct: "jajko", others: ["ser", "masło"] },
+		  { emoji: "🍕", correct: "pizza", others: ["makaron", "ryż"] },
+		  { emoji: "🍝", correct: "makaron", others: ["ryż", "zupa"] },
+		  { emoji: "🍚", correct: "ryż", others: ["makaron", "ziemniak"] },
+		  { emoji: "🍰", correct: "ciasto", others: ["chleb", "lody"] },
+		  { emoji: "🧁", correct: "babeczka", others: ["ciasto", "lody"] },
+		  { emoji: "🍦", correct: "lody", others: ["ciasto", "pizza"] },
+		  { emoji: "🥛", correct: "mleko", others: ["woda", "sok"] },
+		  { emoji: "🥤", correct: "sok", others: ["woda", "mleko"] },
+		  { emoji: "💧", correct: "woda", others: ["sok", "mleko"] }
+		]
+	  },
+	  {
+		id: "home",
+		name: "Dom",
+		icon: "🏠",
+		hint: "To rzeczy w domu. Jak się nazywają?",
+		rounds: [
+		  { emoji: "🏠", correct: "dom", others: ["szkoła", "sklep"] },
+		  { emoji: "🛏️", correct: "łóżko", others: ["stół", "krzesło"] },
+		  { emoji: "🛋️", correct: "sofa", others: ["łóżko", "krzesło"] },
+		  { emoji: "🪑", correct: "krzesło", others: ["stół", "łóżko"] },
+		  { emoji: "🪟", correct: "okno", others: ["drzwi", "zegar"] },
+		  { emoji: "🚪", correct: "drzwi", others: ["okno", "stół"] },
+		  { emoji: "🧸", correct: "zabawka", others: ["książka", "telefon"] },
+		  { emoji: "📺", correct: "telewizor", others: ["telefon", "komputer"] },
+		  { emoji: "📱", correct: "telefon", others: ["telewizor", "zegar"] },
+		  { emoji: "🕰️", correct: "zegar", others: ["lampa", "okno"] },
+		  { emoji: "💡", correct: "lampa", others: ["zegar", "okno"] },
+		  { emoji: "📦", correct: "pudełko", others: ["książka", "plecak"] },
+		  { emoji: "🧹", correct: "miotła", others: ["zmiotka", "szufelka"] },
+		  { emoji: "🪣", correct: "wiadro", others: ["pudełko", "krzesło"] }
+		]
+	  },
+	  {
+		id: "school",
+		name: "Szkoła",
+		icon: "🏫",
+		hint: "Przedmioty i osoby w szkole.",
+		rounds: [
+		  { emoji: "🏫", correct: "szkoła", others: ["dom", "sklep"] },
+		  { emoji: "📚", correct: "książka", others: ["zeszyt", "zabawka"] },
+		  { emoji: "📓", correct: "zeszyt", others: ["książka", "gazeta"] },
+		  { emoji: "✏️", correct: "ołówek", others: ["długopis", "nożyczki"] },
+		  { emoji: "🖊️", correct: "długopis", others: ["ołówek", "klej"] },
+		  { emoji: "✂️", correct: "nożyczki", others: ["klej", "linijka"] },
+		  { emoji: "📐", correct: "linijka", others: ["ołówek", "zeszyt"] },
+		  { emoji: "🧴", correct: "klej", others: ["nożyczki", "długopis"] },
+		  { emoji: "🎒", correct: "plecak", others: ["pudełko", "książka"] },
+		  { emoji: "🧑‍🏫", correct: "nauczyciel", others: ["tata", "kolega"] },
+		  { emoji: "👩‍🏫", correct: "nauczycielka", others: ["mama", "koleżanka"] },
+		  { emoji: "🧑‍🎓", correct: "uczeń", others: ["nauczyciel", "brat"] },
+		  { emoji: "🔤", correct: "litery", others: ["cyfry", "obrazki"] },
+		  { emoji: "🔢", correct: "cyfry", others: ["litery", "książki"] }
+		]
+	  },
+	  {
+		id: "actions",
+		name: "Czynności",
+		icon: "🏃",
+		hint: "Co robi dziecko na obrazku?",
+		rounds: [
+		  { emoji: "🏃‍♂️", correct: "biega", others: ["śpi", "siedzi"] },
+		  { emoji: "😴", correct: "śpi", others: ["biega", "czyta"] },
+		  { emoji: "📖", correct: "czyta", others: ["pisze", "rysuje"] },
+		  { emoji: "✍️", correct: "pisze", others: ["czyta", "biega"] },
+		  { emoji: "🎨", correct: "rysuje", others: ["czyta", "gra"] },
+		  { emoji: "⚽", correct: "gra", others: ["śpi", "czyta"] },
+		  { emoji: "🥤", correct: "pije", others: ["je", "śpi"] },
+		  { emoji: "🍽️", correct: "je", others: ["pije", "rysuje"] },
+		  { emoji: "👂", correct: "słucha", others: ["czyta", "pisze"] },
+		  { emoji: "👀", correct: "patrzy", others: ["biega", "śpi"] },
+		  { emoji: "🧼", correct: "myje ręce", others: ["je", "śpi"] },
+		  { emoji: "🪥", correct: "myje zęby", others: ["pisze", "je"] }
+		]
+	  },
+	  {
+		id: "clothes",
+		name: "Ubrania",
+		icon: "👗",
+		hint: "Jak nazywają się części ubrania?",
+		rounds: [
+		  { emoji: "👕", correct: "koszulka", others: ["spodnie", "sukienka"] },
+		  { emoji: "👖", correct: "spodnie", others: ["buty", "koszulka"] },
+		  { emoji: "👗", correct: "sukienka", others: ["koszulka", "spódnica"] },
+		  { emoji: "👟", correct: "buty", others: ["skarpetki", "czapka"] },
+		  { emoji: "🧦", correct: "skarpetki", others: ["buty", "spodnie"] },
+		  { emoji: "🧥", correct: "kurtka", others: ["koszulka", "czapka"] },
+		  { emoji: "🧢", correct: "czapka", others: ["kurtka", "szalik"] },
+		  { emoji: "🧣", correct: "szalik", others: ["czapka", "koszulka"] },
+		  { emoji: "🧤", correct: "rękawiczki", others: ["skarpetki", "buty"] }
+		]
+	  },
+	  {
+		id: "nature",
+		name: "Przyroda",
+		icon: "🌿",
+		hint: "Elementy przyrody i pogody.",
+		rounds: [
+		  { emoji: "☀️", correct: "słońce", others: ["księżyc", "gwiazda"] },
+		  { emoji: "🌙", correct: "księżyc", others: ["słońce", "gwiazda"] },
+		  { emoji: "⭐", correct: "gwiazda", others: ["słońce", "chmura"] },
+		  { emoji: "☁️", correct: "chmura", others: ["słońce", "śnieg"] },
+		  { emoji: "🌧️", correct: "deszcz", others: ["słońce", "śnieg"] },
+		  { emoji: "❄️", correct: "śnieg", others: ["deszcz", "słońce"] },
+		  { emoji: "🌈", correct: "tęcza", others: ["deszcz", "słońce"] },
+		  { emoji: "🌳", correct: "drzewo", others: ["kwiat", "trawa"] },
+		  { emoji: "🌸", correct: "kwiat", others: ["drzewo", "liść"] },
+		  { emoji: "🍂", correct: "liść", others: ["kwiat", "trawa"] },
+		  { emoji: "🌊", correct: "rzeka", others: ["góra", "drzewo"] },
+		  { emoji: "⛰️", correct: "góra", others: ["rzeka", "dom"] }
+		]
+	  },
+	  {
+		id: "transport",
+		name: "Pojazdy",
+		icon: "🚗",
+		hint: "Jakim pojazdem jedziemy lub lecimy?",
+		rounds: [
+		  { emoji: "🚗", correct: "samochód", others: ["rower", "autobus"] },
+		  { emoji: "🚌", correct: "autobus", others: ["samochód", "tramwaj"] },
+		  { emoji: "🚋", correct: "tramwaj", others: ["autobus", "pociąg"] },
+		  { emoji: "🚆", correct: "pociąg", others: ["tramwaj", "samochód"] },
+		  { emoji: "🚲", correct: "rower", others: ["hulajnoga", "samochód"] },
+		  { emoji: "🛴", correct: "hulajnoga", others: ["rower", "samochód"] },
+		  { emoji: "✈️", correct: "samolot", others: ["statek", "samochód"] },
+		  { emoji: "🚢", correct: "statek", others: ["samolot", "rower"] },
+		  { emoji: "🚀", correct: "rakieta", others: ["samolot", "statek"] }
+		]
+	  },
+	  {
+		id: "family",
+		name: "Rodzina",
+		icon: "👨‍👩‍👧‍👦",
+		hint: "Kto jest kim w rodzinie?",
+		rounds: [
+		  { emoji: "👩", correct: "mama", others: ["pani", "siostra"] },
+		  { emoji: "👨", correct: "tata", others: ["pan", "brat"] },
+		  { emoji: "👵", correct: "babcia", others: ["mama", "pani"] },
+		  { emoji: "👴", correct: "dziadek", others: ["tata", "pan"] },
+		  { emoji: "👦", correct: "brat", others: ["kolega", "chłopiec"] },
+		  { emoji: "👧", correct: "siostra", others: ["koleżanka", "dziewczynka"] },
+		  { emoji: "👶", correct: "dziecko", others: ["brat", "siostra"] },
+		  { emoji: "👨‍👩‍👧‍👦", correct: "rodzina", others: ["klasa", "grupa"] }
+		]
+	  }
+	];
+
+
+    const goodMessages = [
+      "Brawo! Czytasz jak mistrz.",
+      "Super! Twoje oczy są szybkie jak laser.",
+      "Tak jest! Świetnie dopasowane słowo.",
+      "Pięknie! Litery chyba cię lubią. 😊",
+      "Ekstra! Kolejny dobry wybór.",
+      "Świetnie! Ten świat coraz łatwiejszy."
+    ];
+
+    const wrongMessages = [
+      "Prawie! Zwróć uwagę na pierwszą literę.",
+      "Spróbuj inaczej: popatrz na koniec słowa.",
+      "Nie szkodzi. Przeczytaj powoli wszystkie wyrazy.",
+      "Litery czasem mylą – spróbuj jeszcze raz."
+    ];
+
+    const levelCompleteMessages = [
+      "Poziom ukończony! Odblokowujesz nowy świat!",
+      "Świetnie! Ten świat jest twój.",
+      "Brawo! Czas na kolejny poziom."
+    ];
+
+    const worldsRow = document.getElementById("worldsRow");
+    const emojiEl = document.getElementById("emoji");
+    const choicesEl = document.getElementById("choices");
+    const scoreEl = document.getElementById("score");
+    const messageEl = document.getElementById("message");
+    const nextBtn = document.getElementById("next");
+    const cardEl = document.querySelector(".card");
+    const streakEl = document.getElementById("streak");
+    const progressBar = document.getElementById("progressBar");
+    const worldNameLabel = document.getElementById("worldNameLabel");
+    const hintEl = document.getElementById("hint");
+
+    let unlockedWorlds = 1;    // zaczynamy tylko ze Zwierzętami
+    let currentWorldIndex = 0;
+    let currentRound = null;
+    let answered = false;
+    let score = 0;
+    let streak = 0;
+    let bestStreakCurrentWorld = 0;
+    let questionInWorld = 0;
+	
+	const STORAGE_KEY = "znajdz_slowo_progress_v1";
+
+	function saveProgress() {
+	  const state = {
+		unlockedWorlds,
+		currentWorldIndex,
+		score
+	  };
+	  try {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+	  } catch (e) {
+		// jak coś nie zadziała, po prostu ignorujemy
+	  }
+	}
+
+	function loadProgress() {
+	  try {
+		const raw = localStorage.getItem(STORAGE_KEY);
+		if (!raw) return;
+		const state = JSON.parse(raw);
+
+		if (typeof state.unlockedWorlds === "number") {
+		  unlockedWorlds = state.unlockedWorlds;
+		}
+		if (typeof state.currentWorldIndex === "number") {
+		  currentWorldIndex = Math.min(
+			Math.max(0, state.currentWorldIndex),
+			WORLDS.length - 1
+		  );
+		}
+		if (typeof state.score === "number") {
+		  score = state.score;
+		  scoreEl.textContent = "Punkty: " + score;
+		}
+	  } catch (e) {
+		// uszkodzony zapis – ignorujemy
+	  }
+	}
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function randomItem(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function buildWorldButtons() {
+      worldsRow.innerHTML = "";
+      WORLDS.forEach((world, index) => {
+        const btn = document.createElement("button");
+        btn.className = "world-btn";
+        if (index === currentWorldIndex) {
+          btn.classList.add("active");
+        }
+        if (index >= unlockedWorlds) {
+          btn.classList.add("locked");
+        }
+        btn.dataset.index = index;
+
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "icon";
+        iconSpan.textContent = world.icon;
+
+        const textSpan = document.createElement("span");
+        textSpan.textContent = world.name;
+
+        btn.appendChild(iconSpan);
+        btn.appendChild(textSpan);
+
+        btn.addEventListener("click", () => {
+          if (index >= unlockedWorlds) {
+            messageEl.textContent = "Ten świat jest jeszcze zamknięty. Ukończ najpierw poprzedni.";
+            return;
+          }
+          if (currentWorldIndex !== index) {
+            currentWorldIndex = index;
+            streak = 0;
+            bestStreakCurrentWorld = 0;
+            questionInWorld = 0;
+            updateStreakDisplay();
+            loadWorldInfo();
+            loadRound();
+            buildWorldButtons();
+          }
+        });
+
+        worldsRow.appendChild(btn);
+      });
+    }
+
+    function updateStreakDisplay() {
+      streakEl.textContent = streak;
+      const streakInfo = document.querySelector(".streak-info");
+      if (streak >= 3) {
+        streakInfo.classList.add("streak-highlight");
+      } else {
+        streakInfo.classList.remove("streak-highlight");
+      }
+    }
+
+    function updateProgress() {
+      const progress = (questionInWorld / QUESTIONS_PER_LEVEL) * 100;
+      progressBar.style.width = progress + "%";
+    }
+
+    function loadWorldInfo() {
+      const world = WORLDS[currentWorldIndex];
+      worldNameLabel.textContent = "Świat: " + world.name;
+      hintEl.textContent = world.hint;
+      updateProgress();
+    }
+
+    function pickRandomRoundFromWorld(world) {
+      return world.rounds[Math.floor(Math.random() * world.rounds.length)];
+    }
+
+    function loadRound() {
+      answered = false;
+      messageEl.textContent = "";
+      const world = WORLDS[currentWorldIndex];
+
+      currentRound = pickRandomRoundFromWorld(world);
+      emojiEl.textContent = currentRound.emoji;
+
+      const options = shuffle([currentRound.correct, ...currentRound.others]);
+      choicesEl.innerHTML = "";
+
+      options.forEach(word => {
+        const btn = document.createElement("button");
+        btn.textContent = word;
+        btn.className = "choice-btn";
+        btn.addEventListener("click", () => handleChoice(btn, word === currentRound.correct));
+        choicesEl.appendChild(btn);
+      });
+
+      updateProgress();
+      updateStreakDisplay();
+    }
+
+    function handleChoice(button, isCorrect) {
+      if (answered) return;
+      answered = true;
+
+      const allButtons = document.querySelectorAll(".choice-btn");
+      allButtons.forEach(b => b.classList.add("disabled"));
+
+      if (isCorrect) {
+        button.classList.add("correct");
+        const msg = randomItem(goodMessages);
+        messageEl.textContent = msg;
+
+        streak++;
+        bestStreakCurrentWorld = Math.max(bestStreakCurrentWorld, streak);
+        let bonus = streak >= 3 ? 1 : 0;
+        score += 1 + bonus;
+        scoreEl.textContent = "Punkty: " + score;
+        updateStreakDisplay();
+		saveProgress(); 
+
+      } else {
+        button.classList.add("wrong");
+        const msg = randomItem(wrongMessages);
+        messageEl.textContent = msg;
+        streak = 0;
+        updateStreakDisplay();
+
+        cardEl.classList.remove("shake");
+        void cardEl.offsetWidth;
+        cardEl.classList.add("shake");
+
+        allButtons.forEach(b => {
+          if (b.textContent === currentRound.correct) {
+            b.classList.add("correct");
+          }
+        });
+      }
+    }
+
+    function completeWorldIfNeeded() {
+      const world = WORLDS[currentWorldIndex];
+      if (questionInWorld >= QUESTIONS_PER_LEVEL) {
+        const msg = randomItem(levelCompleteMessages);
+        messageEl.textContent = msg + " (Najlepsza seria w tym świecie: " + bestStreakCurrentWorld + ")";
+        questionInWorld = 0;
+        bestStreakCurrentWorld = 0;
+        streak = 0;
+        updateStreakDisplay();
+
+        if (unlockedWorlds < WORLDS.length && currentWorldIndex === unlockedWorlds - 1) {
+          unlockedWorlds++;
+          messageEl.textContent += " Nowy świat odblokowany!";
+        }
+		saveProgress();
+        buildWorldButtons();
+      }
+    }
+
+    function nextRound() {
+      if (!answered) {
+        messageEl.textContent = "Najpierw wybierz słowo, potem przejdź dalej. 🙂";
+        return;
+      }
+
+      questionInWorld++;
+      completeWorldIfNeeded();
+
+      const allButtons = document.querySelectorAll(".choice-btn");
+      allButtons.forEach(b => b.classList.remove("correct", "wrong", "disabled"));
+      cardEl.classList.remove("shake");
+      loadRound();
+    }
+
+    nextBtn.addEventListener("click", nextRound);
+
+	// Start gry
+	loadProgress();        // ⬅ najpierw próbujemy wczytać stan
+	buildWorldButtons();
+	loadWorldInfo();
+	loadRound();
+
+  </script>
+</body>
+</html>

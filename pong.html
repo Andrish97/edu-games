@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Neon Pong</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #020617;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #e5e7eb;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      background: radial-gradient(circle at center, #0b1120, #020617 70%);
+    }
+
+    #score {
+      position: fixed;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 42px;
+      text-shadow: 0 0 10px #22c55e, 0 0 18px #22c55e;
+      letter-spacing: 6px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Pasek powrotu -->
+	<script>
+	(function() {
+	  // jeśli gra została otwarta jako fullscreen (z index.html)
+	  const params = new URLSearchParams(window.location.search);
+	  const isFullscreen = params.get("fullscreen") === "1";
+
+	  if (!isFullscreen) return;
+
+	  const btn = document.createElement("button");
+	  btn.textContent = "Powrót do Arcade";
+	  btn.style.position = "fixed";
+	  btn.style.top = "20px";
+	  btn.style.left = "20px";
+	  btn.style.padding = "8px 16px";
+	  btn.style.border = "none";
+	  btn.style.borderRadius = "999px";
+	  btn.style.cursor = "pointer";
+	  btn.style.zIndex = "9999";
+	  btn.style.fontSize = "14px";
+	  btn.style.fontWeight = "600";
+	  btn.style.background = "linear-gradient(135deg,#22c55e,#16a34a)";
+	  btn.style.color = "#052e16";
+	  btn.style.boxShadow = "0 8px 18px rgba(22,163,74,0.45)";
+	  btn.style.transition = "transform 0.06s ease, box-shadow 0.06s ease";
+
+	  btn.onmouseover = () => {
+		btn.style.transform = "translateY(-1px)";
+		btn.style.boxShadow = "0 12px 26px rgba(22,163,74,0.6)";
+	  };
+	  btn.onmouseout = () => {
+		btn.style.transform = "translateY(0)";
+		btn.style.boxShadow = "0 8px 18px rgba(22,163,74,0.45)";
+	  };
+
+	  btn.onclick = () => {
+		// wraca do index.html niezależnie co to za gra i skąd
+		window.location.href = "../index.html";
+	  };
+
+	  document.body.appendChild(btn);
+	})();
+	</script>
+
+
+<canvas id="game"></canvas>
+<div id="score">0 : 0</div>
+
+<script>
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  const W = () => canvas.width;
+  const H = () => canvas.height;
+
+  const paddleHeight = 120;
+  const paddleWidth = 14;
+
+  const left = { x: 40, y: H()/2 - paddleHeight/2, dy: 0 };
+  const right = { x: W() - 40 - paddleWidth, y: H()/2 - paddleHeight/2 };
+
+  const ball = {
+    x: W()/2,
+    y: H()/2,
+    r: 10,
+    dx: 6,
+    dy: 4
+  };
+
+  let scoreL = 0;
+  let scoreR = 0;
+
+  const keys = { w: false, s: false, ArrowUp: false, ArrowDown: false };
+
+  document.addEventListener("keydown", e => {
+    if (e.key in keys) keys[e.key] = true;
+  });
+  document.addEventListener("keyup", e => {
+    if (e.key in keys) keys[e.key] = false;
+  });
+
+  function resetBall() {
+    ball.x = W()/2;
+    ball.y = H()/2;
+    ball.dx = (Math.random() > 0.5 ? 1 : -1) * 6;
+    ball.dy = (Math.random() - 0.5) * 6;
+  }
+
+  function update() {
+    // ruch gracza
+    if (keys.w || keys.ArrowUp) left.y -= 8;
+    if (keys.s || keys.ArrowDown) left.y += 8;
+
+    left.y = Math.max(0, Math.min(H() - paddleHeight, left.y));
+
+    // AI paddle
+    const target = ball.y - paddleHeight / 2;
+    right.y += (target - right.y) * 0.08;
+
+    right.y = Math.max(0, Math.min(H() - paddleHeight, right.y));
+
+    // ruch piłki
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    // odbicia góra/dół
+    if (ball.y < ball.r || ball.y > H()-ball.r) ball.dy *= -1;
+
+    // lewy paddle
+    if (
+      ball.x - ball.r < left.x + paddleWidth &&
+      ball.y > left.y &&
+      ball.y < left.y + paddleHeight
+    ) {
+      ball.dx *= -1;
+      ball.x = left.x + paddleWidth + ball.r;
+      ball.dy += (Math.random() - 0.5) * 3;
+    }
+
+    // prawy paddle
+    if (
+      ball.x + ball.r > right.x &&
+      ball.y > right.y &&
+      ball.y < right.y + paddleHeight
+    ) {
+      ball.dx *= -1;
+      ball.x = right.x - ball.r;
+      ball.dy += (Math.random() - 0.5) * 3;
+    }
+
+    // Punktacja
+    if (ball.x < 0) {
+      scoreR++;
+      document.getElementById("score").innerText = `${scoreL} : ${scoreR}`;
+      resetBall();
+    }
+    if (ball.x > W()) {
+      scoreL++;
+      document.getElementById("score").innerText = `${scoreL} : ${scoreR}`;
+      resetBall();
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,W(),H());
+
+    // środek – kreskowana linia
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 4;
+    ctx.setLineDash([20, 20]);
+    ctx.beginPath();
+    ctx.moveTo(W()/2, 0);
+    ctx.lineTo(W()/2, H());
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // paddles
+    ctx.fillStyle = "#22c55e";
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#22c55e";
+
+    ctx.fillRect(left.x, left.y, paddleWidth, paddleHeight);
+    ctx.fillRect(right.x, right.y, paddleWidth, paddleHeight);
+
+    // piłka
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  resetBall();
+  loop();
+</script>
+
+</body>
+</html>
