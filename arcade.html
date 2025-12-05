@@ -24,32 +24,25 @@
 
 </head>
 <body class="arcade-body">
+  <!-- pasek logowania – ZAWSZE pierwszy element w body -->
+  <div data-arcade-auth-bar></div>
+
+  <!-- reszta strony, w motywie -->
   <div class="shell">
-    <div class="card arcade-card">
-
-      <!-- UNIWERSALNY PASEK – automatycznie tworzony przez auth-bar.js -->
-      <div
-        data-arcade-auth-bar
-        <!-- tu w arcade NIE przekierowujemy po logowaniu, więc bez data-after-login -->
-      ></div>
-
-      <div class="header">
+    <div class="card">
+      <header class="header">
         <div>
-          <div class="title">Neon Arcade</div>
-          <div class="subtitle">
-            Wybierz kategorię i zagraj. Twoje wyniki mogą zapisywać się lokalnie lub w chmurze (po zalogowaniu).
-          </div>
+          <div class="title">NEON ARCADE</div>
+          <div class="subtitle">Wybierz grę i wskakuj do zabawy.</div>
         </div>
-      </div>
+      </header>
 
-      <!-- Pasek kategorii -->
-      <div class="categories-row" id="categories"></div>
-
-      <!-- Kontener na gry w wybranej kategorii -->
+      <!-- tu arcade.js wyrenderuje kategorie i gry -->
       <div id="games"></div>
-
     </div>
   </div>
 </body>
+
 </html>
+
 
