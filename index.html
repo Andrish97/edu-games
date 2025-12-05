@@ -1,5 +1,51 @@
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/core/auth.js"></script>
-<script src="js/core/progress.js"></script>
-<script src="js/core/ui.js"></script>
-<script src="js/pages/index.js"></script>
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Neon Arcade – start</title>
+
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/login.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/core/auth.js"></script>
+  <script src="js/pages/index.js" defer></script>
+</head>
+<body class="arcade-body">
+  <div class="shell login-shell">
+    <div class="card login-card">
+      <div class="login-title">Neon Arcade</div>
+      <div class="login-subtitle">
+        Zaloguj się albo wejdź jako gość.
+      </div>
+
+      <div class="login-label">Email</div>
+      <input id="email" type="email" class="login-input" placeholder="twoj@mail.com">
+
+      <div class="login-label">Hasło</div>
+      <input id="pass" type="password" class="login-input" placeholder="••••••••">
+
+      <div class="login-label">Powtórz hasło (tylko przy rejestracji)</div>
+      <input id="pass2" type="password" class="login-input" placeholder="••••••••">
+
+      <div class="login-row">
+        <button id="btn-login" class="btn btn-main">Zaloguj</button>
+        <button id="btn-register" class="btn btn-secondary">Załóż konto</button>
+      </div>
+
+      <button id="btn-forgot" class="btn btn-link">Przypomnij hasło</button>
+
+      <button id="btn-guest" class="btn btn-ghost" style="width:100%;margin-top:8px;">
+        Graj jako gość
+      </button>
+
+      <div id="error" class="login-error"></div>
+
+      <div class="login-hint">
+        Gość zapisuje wyniki tylko na tym urządzeniu. <br>
+        Konto pozwala przechowywać progres w chmurze.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
