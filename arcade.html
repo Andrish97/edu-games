@@ -4,16 +4,11 @@
   <meta charset="UTF-8" />
   <title>Neon Arcade</title>
 
-  <!-- Wspólny motyw graficzny -->
   <link rel="stylesheet" href="css/arcade-theme.css">
-
-  <!-- Supabase + rdzeń arcade (topbar, auth, backend progresu) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/arcade-core.js"></script>
 </head>
 <body class="arcade-body">
-  <!-- Pasek logowania / gościa / usera wstrzyknie ArcadeCore -->
-
   <div class="shell" id="arcade-main">
     <div class="card">
       <div class="header">
@@ -25,10 +20,7 @@
         </div>
       </div>
 
-      <!-- Pasek kategorii -->
       <div class="categories-row" id="categories"></div>
-
-      <!-- Gry z aktualnie wybranej kategorii -->
       <div id="games"></div>
 
       <div class="hint">
@@ -223,12 +215,9 @@
         renderGamesForCategory(first.dataset.catId);
       }
     }
-
     document.addEventListener("DOMContentLoaded", () => {
-      // topbar + supabase
-      ArcadeCore.initIndex({});
-      // lista gier
-      renderCategories();
+      ArcadeCore.initIndex();  // wstawi pasek u góry
+      renderCategories();      // Twoja funkcja od listy gier
     });
   </script>
 </body>
