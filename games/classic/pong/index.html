@@ -38,9 +38,22 @@
           <div>
             <h1 class="game-title">Neon Pong</h1>
             <p class="game-subtitle">
-              Odbijaj piłkę przy pomocy paletki po lewej stronie. Sterowanie:
-              <strong>W/S</strong> lub <strong>strzałki góra/dół</strong>.
+              Sterowanie: <strong>A/D</strong>,
+              <strong>strzałki lewo/prawo</strong>,
+              myszą lub dotykiem (przeciągnij paletkę).
             </p>
+          </div>
+
+          <div class="mode-switch">
+            <button
+              id="mode-wall-btn"
+              class="btn-primary mode-btn mode-btn--active"
+            >
+              Trening: Ściana
+            </button>
+            <button id="mode-ai-btn" class="btn-primary mode-btn">
+              Pojedynek z AI
+            </button>
           </div>
         </header>
 
@@ -48,8 +61,12 @@
           <canvas id="game"></canvas>
           <div id="score" class="pong-score">0 : 0</div>
         </div>
+
+        <p class="pong-hint">
+          Trening: odbicia (Gracz) i straty.  
+          Pojedynek: klasyczny wynik Gracz : AI.
+        </p>
       </div>
     </div>
   </body>
 </html>
-
