@@ -1,104 +1,61 @@
-// js/core/game-api.js
-// Proste API do ładowania listy gier z games.json + meta.json każdej gry.
+// js/game-api.js
+// Wczytywanie listy gier i meta
 
-(function () {
-  async function fetchJSON(url) {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error("Nie udało się pobrać " + url);
-    return await res.json();
-  }
-
-  /**
-   * Ładuje surowy config z games.json
-   * Zwraca obiekt { categories: [...] }
-   */
-  async function loadGamesConfig() {
-    return await fetchJSON("games.json");
-  }
-
-  /**
-   * Ładuje meta.json dla konkretnej gry.
-   * @param {string} folder - np. "games/classic"
-   * @param {string} gameId - np. "2048"
-   *
-   * OCZEKIWANY meta.json:
-   * {
-   *   id: "2048",
-   *   name: "Neon 2048",
-   *   description: "...",
-   *   icon: "🔢",
-   *   thumb: null,
-   *   entry: "index.html"
-   * }
-   */
-  async function loadGameMeta(folder, gameId) {
-    const base = folder.replace(/\/$/, "");      // bez końcowego /
-    const path = `${base}/${gameId}/meta.json`;
-    try {
-      const meta = await fetchJSON(path);
-
-      const entry = meta.entry || "index.html";
-      const url = `${base}/${gameId}/${entry}`;
-
-      return {
-        id: meta.id || gameId,
-        name: meta.name || gameId,
-        description: meta.description || "",
-        icon: meta.icon || "🎮",
-        thumb: meta.thumb || null,
-        url
-      };
-    } catch (e) {
-      console.error("[ArcadeGameAPI] Brak lub błąd meta dla gry:", folder, gameId, e);
-      return null;
+const ArcadeGamesAPI = (() => {
+  async function loadConfig() {
+    const res = await fetch("games.json");
+    if (!res.ok) {
+      throw new Error(`Nie udało się wczytać games.json (status ${res.status})`);
     }
-  }
-
-  /**
-   * Główna funkcja używana przez arcade.html:
-   *
-   * Zwraca tablicę kategorii:
-   * [
-   *   {
-   *     id, name, icon,
-   *     games: [
-   *       { id, name, description, icon, thumb, url }
-   *     ]
-   *   }
-   * ]
-   */
-  async function loadCategoriesWithGames() {
-    const cfg = await loadGamesConfig();
-    const result = [];
-
-    const categories = cfg.categories || [];
-    for (const cat of categories) {
-      const folder = cat.folder;
-      const ids = cat.games || [];
-      const games = [];
-
-      for (const gameId of ids) {
-        const meta = await loadGameMeta(folder, gameId);
-        if (meta) games.push(meta);
-      }
-
-      // sortowanie po nazwie
-      games.sort((a, b) => a.name.localeCompare(b.name, "pl"));
-
-      result.push({
-        id: cat.id,
-        name: cat.name,
-        icon: cat.icon || "🎮",
-        games
-      });
+    const json = await res.json();
+    if (!json || !Array.isArray(json.categories)) {
+      throw new Error("Niepoprawny format games.json – brak pola categories.");
     }
-
-    return result;
+    return json;
   }
 
-  window.ArcadeGameAPI = {
-    loadGamesConfig,
-    loadGameMeta,
-    loadCategoriesWithGames
+  async function loadAllGames() {
+    const config = await loadConfig();
+
+    const categories = await Promise.all(
+      config.categories.map(async (cat) => {
+        const games = await Promise.all(
+          (cat.games || []).map(async (gameId) => {
+            const basePath = `${cat.folder}/${gameId}`;
+            const metaPath = `${basePath}/meta.json`;
+
+            const res = await fetch(metaPath);
+            if (!res.ok) {
+              console.warn(
+                `Nie udało się wczytać meta.json dla gry "${gameId}" (kategoria "${cat.id}", status ${res.status})`
+              );
+              return null;
+            }
+
+            const meta = await res.json();
+
+            return {
+              ...meta,
+              id: meta.id || gameId,
+              categoryId: cat.id,
+              categoryName: cat.name,
+              playUrl: `${basePath}/${meta.entry || "index.html"}`,
+            };
+          })
+        );
+
+        return {
+          ...cat,
+          games: games.filter(Boolean),
+        };
+      })
+    );
+
+    return { categories };
+  }
+
+  return {
+    loadConfig,
+    loadAllGames,
   };
 })();
