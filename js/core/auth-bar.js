@@ -36,24 +36,12 @@
           <button class="arcade-btn logout auth-logout" style="display:none">
             Wyloguj
           </button>
-
-            <button
+            <span
               class="auth-forgot"
-              type="button"
-              style="
-                background: none;
-                border: none;
-                color: inherit;
-                font-size: 11px;
-                opacity: 0.8;
-                margin-left: 8px;
-                padding: 0;
-                cursor: pointer;
-                text-decoration: underline;
-              "
+              style="cursor:pointer;font-size:11px;opacity:0.8;"
             >
               Przypomnij hasło
-            </button>
+            </span>
           <span class="auth-error" style="margin-left:8px;font-size:11px;"></span>
         </div>
       </div>
