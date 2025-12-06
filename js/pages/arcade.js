@@ -1,5 +1,5 @@
-// js/arcade.js
-// Render listy gier do #games
+// pages/arcade.js
+// Renderowanie listy gier do #games
 
 (function () {
   function createEl(tag, className, children) {
