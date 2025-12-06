@@ -1,237 +1,406 @@
 const GAME_ID = "neon-pong";
 
+const MODE_WALL = "wall"; // Trening: Ściana
+const MODE_AI = "ai"; // Pojedynek z AI
+
+let currentMode = MODE_WALL;
+
+let canvas, ctx;
+
+// Paletki poziome
+let bottomPaddle, topPaddle;
+
+// Piłka
+let ball;
+
+// Wyniki
+let playerScore = 0;
+let enemyScore = 0;
+
+const paddleWidth = 140;
+const paddleHeight = 14;
+const paddleMargin = 40;
+const ballRadius = 10;
+
+// Klawisze
+const keys = {
+  a: false,
+  d: false,
+  w: false,
+  s: false,
+  ArrowLeft: false,
+  ArrowRight: false,
+  ArrowUp: false,
+  ArrowDown: false
+};
+
+/* ===============================
+   ArcadeProgress — szkielet
+=============================== */
+
 let hasUnsavedChanges = false;
 let LAST_SAVE_DATA = null;
 
-// Stan gry z oryginału
-let canvas, ctx;
-let left, right, ball;
-let scoreL = 0;
-let scoreR = 0;
-
-const paddleHeight = 120;
-const paddleWidth = 14;
-
-const keys = { w: false, s: false, ArrowUp: false, ArrowDown: false };
-
-function W() {
-  return canvas.width;
-}
-
-function H() {
-  return canvas.height;
-}
-
-function resize() {
-  // Dopasowujemy canvas do rozmiaru kontenera .pong-layout
-  const container = canvas.parentElement;
-  const rect = container.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-}
-
-function resetBall() {
-  ball.x = W() / 2;
-  ball.y = H() / 2;
-  ball.dx = (Math.random() > 0.5 ? 1 : -1) * 6;
-  ball.dy = (Math.random() - 0.5) * 6;
-}
-
-function setupGameObjects() {
-  left = { x: 40, y: H() / 2 - paddleHeight / 2, dy: 0 };
-  right = { x: W() - 40 - paddleWidth, y: H() / 2 - paddleHeight / 2 };
-
-  ball = {
-    x: W() / 2,
-    y: H() / 2,
-    r: 10,
-    dx: 6,
-    dy: 4
-  };
-
-  resetBall();
-}
-
-/* ===== ArcadeProgress – MINIMALNY SZKIELET ===== */
-
 function loadProgress() {
-  if (!window.ArcadeProgress || !ArcadeProgress.load) {
-    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.load");
-    return Promise.resolve();
-  }
+  if (!window.ArcadeProgress) return Promise.resolve();
 
   return ArcadeProgress.load(GAME_ID)
-    .then(function (data) {
-      // Na razie nie używamy żadnych danych – gra jest „sesyjna”
+    .then(data => {
       LAST_SAVE_DATA = data || null;
-      hasUnsavedChanges = false;
     })
-    .catch(function (err) {
-      console.error("[GAME]", GAME_ID, "Błąd load:", err);
-    });
+    .catch(err => console.error(err));
 }
 
 function buildSavePayload() {
-  // Możesz później dodać np. najlepszy wynik
   return {};
 }
 
 function saveCurrentSession() {
-  if (!window.ArcadeProgress || !ArcadeProgress.save) {
-    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.save");
-    return Promise.resolve();
-  }
+  if (!window.ArcadeProgress) return Promise.resolve();
 
   const payload = buildSavePayload();
 
-  return ArcadeProgress.save(GAME_ID, payload)
-    .then(function () {
-      LAST_SAVE_DATA = payload;
-      hasUnsavedChanges = false;
-      console.log("[GAME]", GAME_ID, "zapisano:", payload);
-    })
-    .catch(function (err) {
-      console.error("[GAME]", GAME_ID, "Błąd save:", err);
-    });
+  return ArcadeProgress.save(GAME_ID, payload).then(() => {
+    LAST_SAVE_DATA = payload;
+    hasUnsavedChanges = false;
+  });
 }
 
 function clearProgress() {
-  if (!window.ArcadeProgress || !ArcadeProgress.clear) {
-    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.clear");
-    return Promise.resolve();
-  }
-
-  return ArcadeProgress.clear(GAME_ID)
-    .then(function () {
-      LAST_SAVE_DATA = null;
-      hasUnsavedChanges = false;
-      console.log("[GAME]", GAME_ID, "progress wyczyszczony");
-    })
-    .catch(function (err) {
-      console.error("[GAME]", GAME_ID, "Błąd clear:", err);
-    });
+  if (!window.ArcadeProgress) return Promise.resolve();
+  return ArcadeProgress.clear(GAME_ID).then(() => {
+    LAST_SAVE_DATA = null;
+    hasUnsavedChanges = false;
+  });
 }
 
-/* ===== Guardy – na przyszłość (tu raczej nie będą przeszkadzać) ===== */
+/* ===============================
+   Guardy (opcjonalne)
+=============================== */
 
 function setupBeforeUnloadGuard() {
-  window.addEventListener("beforeunload", function (e) {
+  window.addEventListener("beforeunload", e => {
     if (!hasUnsavedChanges) return;
     e.preventDefault();
     e.returnValue = "";
-    return "";
   });
 }
 
 function setupClickGuard() {
-  document.addEventListener("click", function (e) {
+  document.addEventListener("click", e => {
     if (!hasUnsavedChanges) return;
 
     const target = e.target.closest("a,button");
     if (!target) return;
 
     const href = target.getAttribute("href");
-    const isReturnToArcade =
-      (href && href.indexOf("arcade.html") !== -1) ||
+    const isBack =
+      (href && href.includes("arcade.html")) ||
       target.classList.contains("arcade-back-btn");
 
-    if (isReturnToArcade) {
-      const ok = window.confirm(
-        "Masz niezapisany postęp. Wyjść bez zapisywania?"
-      );
-      if (!ok) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+    if (isBack) {
+      const ok = confirm("Masz niezapisany postęp. Wyjść?");
+      if (!ok) e.preventDefault();
     }
   });
 }
 
-/* ===== LOGIKA PONGA – 1:1 z Twojego oryginału ===== */
+/* ===============================
+   Rozmiar canvas
+=============================== */
 
-function update() {
-  // ruch gracza
-  if (keys.w || keys.ArrowUp) left.y -= 8;
-  if (keys.s || keys.ArrowDown) left.y += 8;
+function W() {
+  return canvas.width;
+}
+function H() {
+  return canvas.height;
+}
 
-  left.y = Math.max(0, Math.min(H() - paddleHeight, left.y));
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+}
 
-  // AI paddle
-  const target = ball.y - paddleHeight / 2;
-  right.y += (target - right.y) * 0.08;
-  right.y = Math.max(0, Math.min(H() - paddleHeight, right.y));
+/* ===============================
+   Paletki + piłka
+=============================== */
 
-  // ruch piłki
+function setupObjects() {
+  bottomPaddle = {
+    x: W() / 2 - paddleWidth / 2,
+    y: H() - paddleMargin,
+    width: paddleWidth,
+    height: paddleHeight
+  };
+
+  topPaddle = {
+    x: W() / 2 - paddleWidth / 2,
+    y: paddleMargin - paddleHeight,
+    width: paddleWidth,
+    height: paddleHeight
+  };
+
+  resetBall(true);
+}
+
+function resetBall(down) {
+  ball = {
+    x: W() / 2,
+    y: H() / 2,
+    r: ballRadius,
+    dx: (Math.random() > 0.5 ? 1 : -1) * 5,
+    dy: (down ? 1 : -1) * (4 + Math.random() * 2)
+  };
+}
+
+/* ===============================
+   Tryby gry
+=============================== */
+
+function setMode(mode) {
+  currentMode = mode;
+  playerScore = 0;
+  enemyScore = 0;
+  updateScore();
+
+  const wallBtn = document.getElementById("mode-wall-btn");
+  const aiBtn = document.getElementById("mode-ai-btn");
+
+  wallBtn.classList.toggle("mode-btn--active", mode === MODE_WALL);
+  aiBtn.classList.toggle("mode-btn--active", mode === MODE_AI);
+
+  resetBall(true);
+}
+
+function updateScore() {
+  const score = document.getElementById("score");
+  score.innerText = `${playerScore} : ${enemyScore}`;
+}
+
+/* ===============================
+   Sterowanie klawiszami
+=============================== */
+
+function setupKeyboard() {
+  document.addEventListener("keydown", e => {
+    if (e.key in keys) keys[e.key] = true;
+  });
+
+  document.addEventListener("keyup", e => {
+    if (e.key in keys) keys[e.key] = false;
+  });
+}
+
+function movePlayerKeyboard() {
+  const speed = 10;
+  const left = keys.a || keys.ArrowLeft || keys.w || keys.ArrowUp;
+  const right = keys.d || keys.ArrowRight || keys.s || keys.ArrowDown;
+
+  if (left) bottomPaddle.x -= speed;
+  if (right) bottomPaddle.x += speed;
+
+  bottomPaddle.x = Math.max(
+    0,
+    Math.min(W() - bottomPaddle.width, bottomPaddle.x)
+  );
+}
+
+/* ===============================
+   Sterowanie: ZŁAP I PRZECIĄGNIJ
+=============================== */
+
+function setupGrabControls() {
+  let dragging = false;
+  let grabOffsetX = 0;
+
+  function beginGrab(x, y) {
+    if (
+      y > bottomPaddle.y &&
+      y < bottomPaddle.y + bottomPaddle.height &&
+      x > bottomPaddle.x &&
+      x < bottomPaddle.x + bottomPaddle.width
+    ) {
+      dragging = true;
+      grabOffsetX = x - bottomPaddle.x;
+    }
+  }
+
+  function dragTo(x) {
+    if (!dragging) return;
+    bottomPaddle.x = x - grabOffsetX;
+
+    bottomPaddle.x = Math.max(
+      0,
+      Math.min(W() - bottomPaddle.width, bottomPaddle.x)
+    );
+  }
+
+  canvas.addEventListener("mousedown", e => {
+    const r = canvas.getBoundingClientRect();
+    beginGrab(e.clientX - r.left, e.clientY - r.top);
+  });
+
+  canvas.addEventListener("mousemove", e => {
+    const r = canvas.getBoundingClientRect();
+    dragTo(e.clientX - r.left);
+  });
+
+  document.addEventListener("mouseup", () => (dragging = false));
+
+  canvas.addEventListener("touchstart", e => {
+    const t = e.touches[0];
+    const r = canvas.getBoundingClientRect();
+    beginGrab(t.clientX - r.left, t.clientY - r.top);
+  });
+
+  canvas.addEventListener("touchmove", e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    const r = canvas.getBoundingClientRect();
+    dragTo(t.clientX - r.left);
+  });
+
+  canvas.addEventListener("touchend", () => (dragging = false));
+}
+
+/* ===============================
+   AI
+=============================== */
+
+function moveAI() {
+  if (currentMode !== MODE_AI) return;
+
+  const target = ball.x - topPaddle.width / 2;
+  topPaddle.x += (target - topPaddle.x) * 0.08;
+
+  topPaddle.x = Math.max(
+    0,
+    Math.min(W() - topPaddle.width, topPaddle.x)
+  );
+}
+
+/* ===============================
+   Fizyczne odbicia i punktacja
+=============================== */
+
+function physics() {
   ball.x += ball.dx;
   ball.y += ball.dy;
 
-  // odbicia góra/dół
-  if (ball.y < ball.r || ball.y > H() - ball.r) ball.dy *= -1;
-
-  // lewy paddle
-  if (
-    ball.x - ball.r < left.x + paddleWidth &&
-    ball.y > left.y &&
-    ball.y < left.y + paddleHeight
-  ) {
+  if (ball.x < ball.r) {
+    ball.x = ball.r;
     ball.dx *= -1;
-    ball.x = left.x + paddleWidth + ball.r;
-    ball.dy += (Math.random() - 0.5) * 3;
   }
-
-  // prawy paddle
-  if (
-    ball.x + ball.r > right.x &&
-    ball.y > right.y &&
-    ball.y < right.y + paddleHeight
-  ) {
+  if (ball.x > W() - ball.r) {
+    ball.x = W() - ball.r;
     ball.dx *= -1;
-    ball.x = right.x - ball.r;
-    ball.dy += (Math.random() - 0.5) * 3;
   }
 
-  // Punktacja
-  const scoreEl = document.getElementById("score");
+  if (
+    ball.y + ball.r > bottomPaddle.y &&
+    ball.y - ball.r < bottomPaddle.y + bottomPaddle.height &&
+    ball.x > bottomPaddle.x &&
+    ball.x < bottomPaddle.x + bottomPaddle.width &&
+    ball.dy > 0
+  ) {
+    ball.dy *= -1;
+    ball.y = bottomPaddle.y - ball.r;
+    ball.dx += (Math.random() - 0.5) * 2;
 
-  if (ball.x < 0) {
-    scoreR++;
-    if (scoreEl) scoreEl.innerText = `${scoreL} : ${scoreR}`;
-    resetBall();
+    if (currentMode === MODE_WALL) {
+      playerScore++;
+      updateScore();
+    }
   }
-  if (ball.x > W()) {
-    scoreL++;
-    if (scoreEl) scoreEl.innerText = `${scoreL} : ${scoreR}`;
-    resetBall();
+
+  if (currentMode === MODE_WALL) {
+    if (ball.y < ball.r) {
+      ball.y = ball.r;
+      ball.dy *= -1;
+    }
+    if (ball.y > H()) {
+      enemyScore++;
+      updateScore();
+      resetBall(true);
+    }
+  } else {
+    if (
+      ball.y - ball.r <
+        topPaddle.y + topPaddle.height &&
+      ball.x > topPaddle.x &&
+      ball.x < topPaddle.x + topPaddle.width &&
+      ball.dy < 0
+    ) {
+      ball.dy *= -1;
+      ball.y = topPaddle.y + topPaddle.height + ball.r;
+      ball.dx += (Math.random() - 0.5) * 2;
+    }
+
+    if (ball.y < 0) {
+      playerScore++;
+      updateScore();
+      resetBall(true);
+    }
+    if (ball.y > H()) {
+      enemyScore++;
+      updateScore();
+      resetBall(false);
+    }
   }
 }
+
+/* ===============================
+   Render
+=============================== */
 
 function draw() {
   ctx.clearRect(0, 0, W(), H());
 
-  // środek – kreskowana linia
   ctx.strokeStyle = "#1e293b";
   ctx.lineWidth = 4;
   ctx.setLineDash([20, 20]);
   ctx.beginPath();
-  ctx.moveTo(W() / 2, 0);
-  ctx.lineTo(W() / 2, H());
+  ctx.moveTo(0, H() / 2);
+  ctx.lineTo(W(), H() / 2);
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // paddles
   ctx.fillStyle = "#22c55e";
   ctx.shadowBlur = 15;
   ctx.shadowColor = "#22c55e";
 
-  ctx.fillRect(left.x, left.y, paddleWidth, paddleHeight);
-  ctx.fillRect(right.x, right.y, paddleWidth, paddleHeight);
+  ctx.fillRect(
+    bottomPaddle.x,
+    bottomPaddle.y,
+    bottomPaddle.width,
+    bottomPaddle.height
+  );
 
-  // piłka
+  if (currentMode === MODE_AI) {
+    ctx.fillRect(
+      topPaddle.x,
+      topPaddle.y,
+      topPaddle.width,
+      topPaddle.height
+    );
+  }
+
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.shadowBlur = 0;
+}
+
+/* ===============================
+   Loop
+=============================== */
+
+function update() {
+  movePlayerKeyboard();
+  moveAI();
+  physics();
 }
 
 function loop() {
@@ -240,49 +409,46 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-/* ===== Inicjalizacja gry ===== */
+/* ===============================
+   Init
+=============================== */
 
 function initGame() {
   canvas = document.getElementById("game");
-  if (!canvas) {
-    console.error("[GAME]", GAME_ID, "Brak elementu canvas#game");
-    return;
-  }
   ctx = canvas.getContext("2d");
 
-  // Klawisze
-  document.addEventListener("keydown", function (e) {
-    if (e.key in keys) keys[e.key] = true;
+  setupKeyboard();
+  setupGrabControls();
+
+  window.addEventListener("resize", () => {
+    resizeCanvas();
+    setupObjects();
   });
-  document.addEventListener("keyup", function (e) {
-    if (e.key in keys) keys[e.key] = false;
-  });
 
-  // Resize reaguje na okno – ale bazuje na rozmiarze kontenera gry
-  function handleResize() {
-    resize();
-  }
-
-  window.addEventListener("resize", handleResize);
-
-  // Najpierw wczytaj progres (jeśli kiedykolwiek będziesz go używać)
-  loadProgress().then(function () {
-    resize();
-    setupGameObjects();
+  loadProgress().then(() => {
+    resizeCanvas();
+    setupObjects();
 
     setupBeforeUnloadGuard();
     setupClickGuard();
 
-    // Przycisk powrotu dodawany uniwersalnie
-    if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
+    if (window.ArcadeUI) {
       ArcadeUI.addBackToArcadeButton({
         backUrl: "../../../arcade.html"
       });
     }
 
+    document
+      .getElementById("mode-wall-btn")
+      .addEventListener("click", () => setMode(MODE_WALL));
+
+    document
+      .getElementById("mode-ai-btn")
+      .addEventListener("click", () => setMode(MODE_AI));
+
+    updateScore();
     loop();
   });
 }
 
 document.addEventListener("DOMContentLoaded", initGame);
-
