@@ -6,74 +6,17 @@
 
     <link rel="stylesheet" href="css/theme.css" />
 
+    <!-- Supabase klient (do auth.js) -->
     <script
       src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
       defer
     ></script>
+
+    <!-- Core auth (ArcadeAuth + ArcadeAuthUI) -->
     <script src="js/core/auth.js" defer></script>
 
-    <script>
-      document.addEventListener("DOMContentLoaded", async () => {
-        // jeśli user jest zalogowany → od razu do arcade
-        if (window.ArcadeAuth && ArcadeAuth.getUser) {
-          const user = await ArcadeAuth.getUser();
-          if (user) {
-            window.location.href = "arcade.html";
-            return;
-          }
-        }
-
-        const email = document.querySelector(".auth-email");
-        const pass = document.querySelector(".auth-pass");
-        const pass2 = document.querySelector(".auth-pass2");
-        const status = document.querySelector(".auth-status");
-        const error = document.querySelector(".auth-error");
-        const btnLogin = document.querySelector(".auth-login");
-        const btnRegister = document.querySelector(".auth-register");
-        const btnGuest = document.querySelector(".auth-guest");
-        const btnLogout = document.querySelector(".auth-logout");
-        const btnForgot = document.querySelector(".auth-forgot");
-
-        if (window.ArcadeAuthUI && ArcadeAuthUI.initLoginPanel) {
-          ArcadeAuthUI.initLoginPanel({
-            email,
-            pass,
-            pass2,
-            status,
-            error,
-            btnLogin,
-            btnRegister,
-            btnGuest,
-            btnLogout,
-            btnForgot,
-            onLoginSuccess() {
-              window.location.href = "arcade.html";
-            },
-            onRegisterSuccess() {
-              // zostajemy tu, user musi kliknąć link aktywacyjny z maila
-            },
-            onLogout() {
-              window.location.reload();
-            },
-            onGuest() {
-              window.location.href = "arcade.html";
-            },
-          });
-        }
-      });
-
-      // obsługa powrotu strzałką – przy wejściu z cache też sprawdź
-      window.addEventListener("pageshow", async (event) => {
-        if (event.persisted) {
-          if (window.ArcadeAuth && ArcadeAuth.getUser) {
-            const user = await ArcadeAuth.getUser();
-            if (user) {
-              window.location.href = "arcade.html";
-            }
-          }
-        }
-      });
-    </script>
+    <!-- Logika strony index (redirect + panel logowania) -->
+    <script src="js/index.js" defer></script>
   </head>
   <body class="arcade-body">
     <div class="shell">
