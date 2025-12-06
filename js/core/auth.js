@@ -182,6 +182,7 @@ window.ArcadeAuthUI = {
    * @param {Function} [opts.onLogout]
    * @param {Function} [opts.onGuest]
    */
+window.ArcadeAuthUI = {
   initLoginPanel(opts) {
     const {
       email,
@@ -212,7 +213,7 @@ window.ArcadeAuthUI = {
     }
 
     function setStatus(msg) {
-      if (status) status.textContent = msg;
+      if (status) status.textContent = msg || "";
     }
 
     function switchToLoginMode() {
@@ -231,34 +232,57 @@ window.ArcadeAuthUI = {
       setError("");
     }
 
+    // >>> KLUCZOWA FUNKCJA – steruje tym, co widać <<<
+    function updateView(user) {
+      const loggedIn = !!user;
+
+      if (loggedIn) {
+        // Zalogowany: ukryj pola i przyciski logowania/rejestracji
+        if (email) email.style.display = "none";
+        if (pass) pass.style.display = "none";
+        if (pass2) pass2.style.display = "none";
+
+        if (btnLogin) btnLogin.style.display = "none";
+        if (btnRegister) btnRegister.style.display = "none";
+        if (btnGuest) btnGuest.style.display = "none";
+        if (btnForgot) btnForgot.style.display = "none";
+
+        if (btnLogout) btnLogout.style.display = "inline-flex";
+
+        setStatus(`Zalogowany jako: ${user.email}`);
+      } else {
+        // Niezalogowany: pokaż pola i przyciski
+        if (email) email.style.display = "inline-block";
+        if (pass) pass.style.display = "inline-block";
+
+        // drugie pole hasła tylko w trybie rejestracji
+        if (pass2) {
+          pass2.style.display = mode === "register" ? "inline-block" : "none";
+        }
+
+        if (btnLogin) btnLogin.style.display = "inline-flex";
+        if (btnRegister) btnRegister.style.display = "inline-flex";
+        if (btnGuest) btnGuest.style.display = "inline-flex";
+        if (btnForgot) btnForgot.style.display = "inline";
+
+        if (btnLogout) btnLogout.style.display = "none";
+
+        setStatus("Gość (niezalogowany)");
+      }
+    }
+
     switchToLoginMode();
     setStatus("Ładuję status...");
 
-    // status na starcie
+    // Stan początkowy
     ArcadeAuth.getUser().then((user) => {
-      if (user) {
-        setStatus(`Zalogowany jako: ${user.email}`);
-        if (btnLogout) btnLogout.style.display = "inline-block";
-        if (btnGuest) btnGuest.style.display = "none";
-      } else {
-        setStatus("Gość (niezalogowany)");
-        if (btnLogout) btnLogout.style.display = "none";
-        if (btnGuest) btnGuest.style.display = "inline-block";
-      }
+      updateView(user);
     });
 
-    // zmiana stanu sesji
+    // Zmiany sesji
     ArcadeAuth.onAuthStateChange(async (event, session) => {
       const user = session?.user || (await ArcadeAuth.getUser());
-      if (user) {
-        setStatus(`Zalogowany jako: ${user.email}`);
-        if (btnLogout) btnLogout.style.display = "inline-block";
-        if (btnGuest) btnGuest.style.display = "none";
-      } else {
-        setStatus("Gość (niezalogowany)");
-        if (btnLogout) btnLogout.style.display = "none";
-        if (btnGuest) btnGuest.style.display = "inline-block";
-      }
+      updateView(user);
     });
 
     // logowanie / rejestracja – ten sam przycisk
@@ -287,8 +311,9 @@ window.ArcadeAuthUI = {
         }
       } else {
         try {
-          await ArcadeAuth.signIn(mail, pwd);
+          const user = await ArcadeAuth.signIn(mail, pwd);
           setStatus("Zalogowano.");
+          updateView(user);
           if (onLoginSuccess) onLoginSuccess();
         } catch (e) {
           console.error("[ArcadeAuthUI] login error:", e);
@@ -304,6 +329,8 @@ window.ArcadeAuthUI = {
       } else {
         switchToLoginMode();
       }
+      // po zmianie trybu odśwież widok pól (szczególnie pass2)
+      ArcadeAuth.getUser().then((user) => updateView(user));
     });
 
     if (btnLogout) {
@@ -312,6 +339,7 @@ window.ArcadeAuthUI = {
         try {
           await ArcadeAuth.signOut();
           setStatus("Wylogowano.");
+          updateView(null);
           if (onLogout) onLogout();
         } catch (e) {
           console.error("[ArcadeAuthUI] logout error:", e);
@@ -347,3 +375,4 @@ window.ArcadeAuthUI = {
     }
   },
 };
+
