@@ -3,12 +3,11 @@
 /* KARTA GRY */
 
 .game-root {
-  max-width: 720px;
-  margin: 2rem auto;
-  padding: 1.5rem 1.8rem;
+  /* szerokość i centrowanie robi theme.css (arcade-game-page .card.game-root) */
   border-radius: 1rem;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
+  padding: 1.5rem 1.8rem;
 }
 
 /* NAGŁÓWEK: TYTUŁ + OPIS + STATYSTYKI + PRZYCISKI */
@@ -251,12 +250,11 @@
   font-style: italic;
 }
 
-/* RWD */
+/* RWD – SZEROKOŚĆ */
 
 @media (max-width: 640px) {
   .game-root {
-    margin: 1rem;
-    padding: 1rem;
+    padding: 1.1rem 1.1rem 1rem;
   }
 
   .game-header {
@@ -276,5 +274,35 @@
 
   .board {
     max-width: 100%;
+  }
+}
+
+/* RWD – WYSOKOŚĆ: staramy się zmieścić bez przewijania */
+
+@media (max-height: 720px) {
+  .game-root {
+    padding: 1rem 1.2rem 0.9rem;
+  }
+
+  .game-title {
+    font-size: 1.7rem;
+  }
+
+  .game-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .board {
+    max-width: min(360px, 70vh);
+    gap: 0.6rem;
+    padding: 0.6rem;
+  }
+
+  .tile {
+    font-size: 1.2rem;
+  }
+
+  .game-info {
+    font-size: 0.8rem;
   }
 }
