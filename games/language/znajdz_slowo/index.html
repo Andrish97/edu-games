@@ -1,76 +1,99 @@
 <!DOCTYPE html>
 <html lang="pl">
-<head>
-  <meta charset="UTF-8" />
-  <title>Znajdź słowo – Neon Arcade</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <head>
+    <meta charset="UTF-8" />
+    <title>Znajdź słowo – Neon Arcade</title>
 
-  <!-- Ogólny motyw Neon Arcade -->
-  <link rel="stylesheet" href="../../css/theme.css" />
+    <!-- Motyw globalny -->
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <!-- Styl gry -->
+    <link rel="stylesheet" href="game.css" />
 
-  <!-- Style gry -->
-  <link rel="stylesheet" href="game.css" />
+    <!-- Supabase – musi być przed auth.js -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+      defer
+    ></script>
 
-  <!-- Core Neon Arcade -->
-  <script src="../../js/core/auth.js" defer></script>
-  <script src="../../js/core/progress.js" defer></script>
-  <script src="../../js/core/ui.js" defer></script>
+    <!-- Core -->
+    <script src="../../../js/core/auth.js" defer></script>
+    <script src="../../../js/core/auth-bar.js" defer></script>
+    <script src="../../../js/core/progress.js" defer></script>
+    <script src="../../../js/core/ui.js" defer></script>
 
-  <!-- Logika gry -->
-  <script src="game.js" defer></script>
-</head>
-<body class="arcade-body">
-  <main class="shell">
-    <section class="card game-root">
-      <header class="game-header">
-        <div>
-          <h1 class="game-title">Znajdź słowo</h1>
-          <p class="game-subtitle">
-            Świat: <span id="world-name">Zwierzęta</span>
-          </p>
-          <p class="game-subtitle game-subtitle--secondary">
-            Kliknij wyraz, który pasuje do obrazka.
-          </p>
-        </div>
+    <!-- Logika gry -->
+    <script src="game.js" defer></script>
+  </head>
+  <body class="arcade-body arcade-game-page">
+    <div
+      data-arcade-auth-bar
+      data-after-login="../../../arcade.html"
+      data-after-guest="../../../arcade.html"
+    ></div>
 
-        <div class="score-panel">
-          <div class="score-box">
-            <span class="score-label">Seria</span>
-            <span class="score-value" id="streak">0</span>
+    <div class="shell">
+      <div class="card game-root">
+        <header class="game-header">
+          <div>
+            <h1 class="game-title">Znajdź słowo</h1>
+            <p class="game-subtitle">
+              Kliknij wyraz, który pasuje do obrazka. Odblokowuj kolejne światy.
+            </p>
           </div>
-          <div class="score-box">
-            <span class="score-label">Punkty</span>
-            <span class="score-value" id="score">0</span>
+
+          <div class="score-panel">
+            <div class="score-box">
+              <span class="score-label">Punkty</span>
+              <span id="score" class="score-value">Punkty: 0</span>
+            </div>
+            <div class="score-box">
+              <span class="score-label">Światy</span>
+              <span id="unlocked-worlds-label" class="score-value">1 / 9</span>
+            </div>
+          </div>
+
+          <div class="score-panel score-panel--controls">
+            <button id="new-game-btn" class="btn-primary">Nowa gra</button>
+            <button id="save-game-btn" class="btn-primary">Zapisz</button>
+            <button id="reset-record-btn" class="btn-primary">
+              Wyczyść postęp
+            </button>
+          </div>
+        </header>
+
+        <div class="worlds-row" id="worldsRow">
+          <!-- przyciski światów wypełni JS -->
+        </div>
+
+        <div class="top-row">
+          <div class="world-name" id="worldNameLabel">Świat: Zwierzęta</div>
+          <div class="streak-info">
+            Seria: <span id="streak">0</span>
           </div>
         </div>
-      </header>
 
-      <section class="word-game">
-        <div
-          class="word-image"
-          id="image-area"
-          aria-label="Obrazek do odgadnięcia"
-        ></div>
-
-        <div class="options" id="options"></div>
-
-        <p class="feedback" id="feedback" aria-live="polite"></p>
-      </section>
-
-      <footer class="game-footer">
-        <div class="game-footer-left">
-          <button class="btn btn-main" id="next-btn">Następne</button>
-          <button class="btn btn-ghost" id="clear-progress-btn">
-            Wyczyść postęp
-          </button>
+        <div class="progress-wrapper">
+          <div class="progress-bar" id="progressBar"></div>
         </div>
-        <p class="game-info">
-          Najpierw kliknij poprawne słowo, potem przejdź dalej do kolejnego
-          obrazka.
-        </p>
-      </footer>
-    </section>
-  </main>
-</body>
+
+        <div class="emoji-box" id="emoji">🐱</div>
+        <div class="hint" id="hint">
+          Kliknij wyraz, który pasuje do obrazka.
+        </div>
+
+        <div class="choices" id="choices"></div>
+
+        <div id="message"></div>
+
+        <div class="bottom-row">
+          <div class="bottom-info">
+            Rozegrane pytania w świecie: 
+            <span id="question-counter">0</span> / 
+            <span id="questions-per-level-label">6</span>
+          </div>
+          <button id="next" class="btn-primary">Następne</button>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>
-
