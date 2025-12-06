@@ -369,3 +369,15 @@
     font-size: 0.8rem;
   }
 }
+/* Override dla tej konkretnej gry – jeśli karta jest wyższa niż ekran, pozwól przewijać */
+.arcade-game-page {
+  max-height: none;
+  overflow-y: auto;
+}
+
+/* Żeby karta zaczynała się bardziej od góry, a nie idealnie na środku */
+.arcade-game-page .shell {
+  align-items: flex-start;
+  padding-top: 1rem;
+  padding-bottom: 1.5rem;
+}
