@@ -16,9 +16,10 @@
     <!-- Core -->
     <script src="js/core/auth.js" defer></script>
     <script src="js/core/auth-bar.js" defer></script>
+    <script src="js/core/progress.js" defer></script>
     <script src="js/core/ui.js" defer></script>
 
-    <!-- Logika arcade (nowa) -->
+    <!-- Logika arcade -->
     <script src="js/pages/arcade.js" defer></script>
   </head>
   <body class="arcade-body">
@@ -32,24 +33,24 @@
       <header class="arcade-header">
         <h1 class="arcade-title">Neon Arcade</h1>
         <p class="arcade-subtitle">
-          Wybierz kategorię, a potem grę.
+          Wybierz kategorię z zakładek i zagraj w jedną z gier.
         </p>
       </header>
 
-      <!-- KATEGORIE JAKO KARTY -->
+      <!-- Zakładki kategorii -->
       <section class="arcade-section">
         <h2 class="arcade-section-title">Kategorie</h2>
-        <div id="categories" class="categories-row"></div>
+        <div id="categories" class="categories-tabs"></div>
       </section>
 
-      <!-- GRY W WYBRANEJ KATEGORII -->
-      <section
-        class="arcade-section games-section"
-        id="games-section"
-        hidden
-      >
+      <!-- Gry w wybranej kategorii -->
+      <section class="arcade-section games-section" id="games-section" hidden>
         <div class="games-header">
-          <button id="back-to-categories" class="back-to-categories-btn" type="button">
+          <button
+            id="back-to-categories"
+            class="back-to-categories-btn"
+            type="button"
+          >
             ← Wszystkie kategorie
           </button>
           <h2 id="games-section-title" class="arcade-section-title"></h2>
