@@ -192,7 +192,24 @@ function initGame() {
   });
 }
 ```
+### Przycisk „Powrót do Arcade”
 
+Każda gra powinna na końcu `initGame` zawołać:
+
+```js
+function initArcadeBackButton() {
+  if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
+    ArcadeUI.addBackToArcadeButton({
+      backUrl: "../../../arcade.html",
+    });
+  }
+}
+
+function initGame() {
+  // ...
+  initArcadeBackButton();
+}
+```
 ### Ładowanie progresu
 
 ``` js
