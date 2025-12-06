@@ -1,5 +1,5 @@
-// js/game-api.js
-// Wczytywanie listy gier i meta
+// js/core/game-api.js
+// Wczytywanie listy gier i meta.json
 
 const ArcadeGamesAPI = (() => {
   async function loadConfig() {
