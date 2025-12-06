@@ -47,9 +47,7 @@
     clearError();
 
     return fetch("games.json", {
-      headers: {
-        "Cache-Control": "no-cache",
-      },
+      headers: { "Cache-Control": "no-cache" },
     })
       .then((res) => {
         if (!res.ok) {
@@ -59,7 +57,7 @@
       })
       .then((data) => {
         categories = (data && data.categories) || [];
-        renderCategoryCards();
+        renderCategoryTabs();
       })
       .catch((err) => {
         console.error("[arcade] Błąd ładowania kategorii:", err);
@@ -71,82 +69,64 @@
   }
 
   // ------------------------------
-  // Render kategorii jako kart
+  // Render zakładek kategorii
   // ------------------------------
 
-  function renderCategoryCards() {
+  function renderCategoryTabs() {
     const container = $(CATEGORIES_CONTAINER_SELECTOR);
     const gamesSection = $(GAMES_SECTION_SELECTOR);
 
-    if (!container) {
-      console.warn("[arcade] Brak #categories w DOM.");
-      return;
-    }
+    if (!container) return;
 
-    // pokazujemy sekcję kategorii, ukrywamy listę gier
     container.innerHTML = "";
-    if (gamesSection) {
-      gamesSection.hidden = true;
-    }
+    if (gamesSection) gamesSection.hidden = true;
 
     if (!categories.length) {
       container.innerHTML =
-        '<p class="arcade-empty">Brak zdefiniowanych kategorii w games.json.</p>';
+        '<p class="arcade-empty">Brak kategorii w games.json.</p>';
       return;
     }
 
-    const frag = document.createDocumentFragment();
-
     categories.forEach((cat) => {
-      const icon = cat.icon || "🎮";
-      const count = (cat.games && cat.games.length) || 0;
+      const icon = cat.icon || "";
+      const name = cat.name || cat.id;
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "game-card category-card";
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "category-tab";
 
-      btn.innerHTML = `
-        <div class="game-headline">
-          <span class="game-icon">${icon}</span>
-          <span class="game-name">${cat.name || cat.id}</span>
-        </div>
-        <div class="game-desc">
-          ${count === 1 ? "1 gra w kategorii" : count + " gier w kategorii"}
-        </div>
-        <div class="game-footer">
-          <span class="pill">KATEGORIA</span>
-        </div>
+      tab.innerHTML = `
+        ${icon ? `<span class="icon">${icon}</span>` : ""}
+        <span>${name}</span>
       `;
 
-      btn.addEventListener("click", function () {
-        onCategoryClick(cat);
-      });
+      tab.addEventListener("click", () => onCategoryClick(cat, tab));
 
-      frag.appendChild(btn);
+      container.appendChild(tab);
     });
-
-    container.appendChild(frag);
   }
 
   // ------------------------------
   // Kliknięcie kategorii
   // ------------------------------
 
-  function onCategoryClick(category) {
+  function onCategoryClick(category, clickedTab) {
+    const tabs = document.querySelectorAll(".category-tab");
+    tabs.forEach((t) => t.classList.remove("active"));
+    if (clickedTab) clickedTab.classList.add("active");
+
     const gamesSection = $(GAMES_SECTION_SELECTOR);
     const gamesContainer = $(GAMES_CONTAINER_SELECTOR);
     const titleEl = $(GAMES_SECTION_TITLE_SELECTOR);
 
-    if (!gamesSection || !gamesContainer || !titleEl) {
-      console.warn("[arcade] Brak elementów sekcji gier.");
-      return;
-    }
+    if (!gamesSection || !gamesContainer || !titleEl) return;
 
-    titleEl.textContent = category.name || category.id;
-    gamesContainer.innerHTML = "";
     gamesSection.hidden = false;
-    clearError();
+    gamesContainer.innerHTML = "";
+    titleEl.textContent = category.name || category.id;
+
     showLoading();
+    clearError();
 
     const folder = category.folder;
     const gameIds = category.games || [];
@@ -192,11 +172,7 @@
       })
       .then((meta) => {
         if (!meta) return null;
-        const full = {
-          ...meta,
-          _folder: folder,
-          _id: gameId,
-        };
+        const full = { ...meta, _folder: folder, _id: gameId };
         gameMetaCache.set(cacheKey, full);
         return full;
       })
@@ -207,7 +183,7 @@
   }
 
   // ------------------------------
-  // Render kafelków gier
+  // Render kafelków gier + statystyki
   // ------------------------------
 
   function renderGameCards(metas, container, category) {
@@ -224,6 +200,7 @@
       const href = `${meta._folder}/${meta._id}/${entry}`;
       const icon = meta.icon || category.icon || "🎮";
       const desc = meta.description || "";
+      const gameId = meta.id || meta._id;
 
       const card = document.createElement("a");
       card.href = href;
@@ -238,14 +215,15 @@
           <span class="game-name">${meta.name || meta.id}</span>
         </div>
         <div class="game-desc">${desc}</div>
+        <div class="game-stats" data-game-stats="${gameId}">
+          Statystyki: ładowanie…
+        </div>
         <div class="game-footer">
           <span class="pill">${category.name || category.id}</span>
           <button class="play-btn" type="button">Graj</button>
         </div>
       `;
 
-      // kliknięcie w przycisk "Graj" nie powinno otwierać nowej karty,
-      // tylko po prostu wejść w href
       const playBtn = card.querySelector(".play-btn");
       if (playBtn) {
         playBtn.addEventListener("click", function (e) {
@@ -255,10 +233,75 @@
       }
 
       frag.appendChild(card);
+
+      // asynchroniczne wczytanie statystyk z ArcadeProgress
+      loadGameStats(gameId);
     });
 
     container.innerHTML = "";
     container.appendChild(frag);
+  }
+
+  // ------------------------------
+  // Statystyki gry z ArcadeProgress
+  // ------------------------------
+
+  function loadGameStats(gameId) {
+    if (!window.ArcadeProgress || !ArcadeProgress.load) {
+      // Brak systemu progresu — ukrywamy tekst
+      const statEls = document.querySelectorAll(
+        `.game-stats[data-game-stats="${gameId}"]`
+      );
+      statEls.forEach((el) => {
+        el.textContent = "Statystyki niedostępne.";
+      });
+      return;
+    }
+
+    ArcadeProgress.load(gameId)
+      .then((data) => {
+        const statEls = document.querySelectorAll(
+          `.game-stats[data-game-stats="${gameId}"]`
+        );
+
+        if (!statEls.length) return;
+
+        if (!data) {
+          statEls.forEach((el) => {
+            el.textContent = "Brak zapisanych wyników.";
+          });
+          return;
+        }
+
+        const best = typeof data.bestScore === "number" ? data.bestScore : null;
+        const total =
+          typeof data.totalGames === "number" ? data.totalGames : null;
+
+        let text = "";
+
+        if (best != null && total != null) {
+          text = `Rekord: ${best} • Rozegrane: ${total}`;
+        } else if (best != null) {
+          text = `Rekord: ${best}`;
+        } else if (total != null) {
+          text = `Rozegrane: ${total}`;
+        } else {
+          text = "Brak zapisanych wyników.";
+        }
+
+        statEls.forEach((el) => {
+          el.textContent = text;
+        });
+      })
+      .catch((err) => {
+        console.error("[arcade] Błąd ładowania statystyk dla", gameId, err);
+        const statEls = document.querySelectorAll(
+          `.game-stats[data-game-stats="${gameId}"]`
+        );
+        statEls.forEach((el) => {
+          el.textContent = "Statystyki chwilowo niedostępne.";
+        });
+      });
   }
 
   // ------------------------------
@@ -274,7 +317,9 @@
     backBtn.addEventListener("click", function () {
       gamesSection.hidden = true;
       clearError();
-      renderCategoryCards();
+
+      const tabs = document.querySelectorAll(".category-tab");
+      tabs.forEach((t) => t.classList.remove("active"));
     });
   }
 
