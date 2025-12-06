@@ -1,19 +1,24 @@
 /* games/classic/2048/game.css */
 
+/* KARTA GRY */
+
 .game-root {
   max-width: 720px;
   margin: 2rem auto;
-  padding: 1.5rem;
+  padding: 1.5rem 1.8rem;
   border-radius: 1rem;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
 }
 
+/* NAGŁÓWEK: TYTUŁ + OPIS + STATYSTYKI + PRZYCISKI */
+
 .game-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 1.5rem;
-  align-items: center;
+  gap: 1.25rem;
+  align-items: flex-start;
   margin-bottom: 1.5rem;
 }
 
@@ -25,13 +30,24 @@
 .game-subtitle {
   margin: 0.25rem 0 0;
   opacity: 0.8;
+  font-size: 0.95rem;
 }
+
+/* PANEL WYNIKÓW + PANEL PRZYCISKÓW */
 
 .score-panel {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
+
+/* pierwszy panel (WYNIK / REKORD / GRY) może się zawijać,
+   drugi (przyciski) pływa na prawo i przykleja się do góry */
+.game-header > .score-panel:last-of-type {
+  margin-left: auto;
+}
+
+/* STATYSTYKI */
 
 .score-box {
   min-width: 80px;
@@ -53,6 +69,8 @@
   font-weight: 700;
 }
 
+/* PRZYCISKI */
+
 .btn-primary {
   border: none;
   border-radius: 999px;
@@ -64,6 +82,7 @@
   font-weight: 600;
   box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
   transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.1s ease;
+  white-space: nowrap;
 }
 
 .btn-primary:hover {
@@ -76,9 +95,13 @@
   opacity: 0.8;
 }
 
+/* PLANSZA 4x4 */
+
 .board-wrapper {
   position: relative;
-  margin-bottom: 1rem;
+  margin: 0 auto 1rem;
+  display: flex;
+  justify-content: center;
 }
 
 .board {
@@ -96,6 +119,8 @@
   gap: 0.75rem;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
 }
+
+/* KAFELKI */
 
 .tile {
   border-radius: 0.7rem;
@@ -116,7 +141,7 @@
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
 
-/* Prosty system kolorów – możesz zmienić pod swój theme */
+/* kolorki */
 
 .tile--2 {
   background: rgba(0, 240, 255, 0.3);
@@ -170,13 +195,17 @@
   font-size: 1.1rem;
 }
 
-/* overlay */
+/* OVERLAY KONIEC GRY */
 
 .overlay {
   position: absolute;
   inset: 0;
   border-radius: 1rem;
-  background: radial-gradient(circle at top, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.9));
+  background: radial-gradient(
+    circle at top,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.9)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,7 +238,7 @@
   opacity: 0.9;
 }
 
-/* info */
+/* INFO POD PLANSZĄ */
 
 .game-info {
   text-align: center;
@@ -235,9 +264,14 @@
     align-items: flex-start;
   }
 
+  .game-header > .score-panel:last-of-type {
+    margin-left: 0;
+  }
+
   .score-panel {
     align-self: stretch;
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .board {
