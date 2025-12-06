@@ -1,15 +1,5 @@
 # 🕹️ Neon Arcade -- Kompletny Przewodnik Tworzenia Gier
 
-*(Wersja do repo w formacie Markdown, idealna do umieszczenia jako
-`GUIDE_GAMES.md`)*
-
-Ten dokument definiuje zasady tworzenia nowych gier dla projektu **Neon
-Arcade**.\
-Zawiera pełny opis architektury, struktury folderów, standardów
-kodowania oraz integracji z systemem logowania, progresu i motywu.
-
-Możesz wkleić go bezpośrednio do repozytorium GitHub.
-
 ------------------------------------------------------------------------
 
 ## 📌 1. Struktura projektu
@@ -299,10 +289,3 @@ window.addEventListener("beforeunload", (e) => {
 7.  Użyj `data-arcade-auth-bar`.
 
 8.  Użyj `ArcadeUI.addBackToArcadeButton`.
-
-------------------------------------------------------------------------
-
-# 🎉 Koniec przewodnika
-
-Możesz teraz tworzyć dowolną liczbę gier, a każda z nich automatycznie
-pojawi się w Neon Arcade, z pełnym wsparciem motywu, paska i progresu.
