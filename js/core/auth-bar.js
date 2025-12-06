@@ -1,44 +1,42 @@
 // js/core/auth-bar.js
-// Wymaga: auth.js (ArcadeAuth + ArcadeAuthUI)
+// Pasek logowania + integracja z ArcadeAuthUI
 
 (function () {
   function barHTML() {
     return `
       <div class="arcade-topbar">
-        <div class="arcade-user auth-status">
+        <div class="auth-status">
           Ładuję status...
         </div>
-        <div class="arcade-auth">
+        <div class="auth-controls">
           <input
             type="email"
-            class="arcade-input auth-email"
+            class="auth-email arcade-input"
             placeholder="Email"
           />
           <input
             type="password"
-            class="arcade-input auth-pass"
+            class="auth-pass arcade-input"
             placeholder="Hasło"
           />
           <input
             type="password"
-            class="arcade-input auth-pass2"
+            class="auth-pass2 arcade-input"
             placeholder="Powtórz hasło"
             style="display:none"
           />
 
           <button class="arcade-btn auth-login">Zaloguj</button>
-          <button class="arcade-btn guest auth-guest">Gość</button>
-          <button class="arcade-btn auth-register">Załóż konto</button>
-          <button class="arcade-btn logout auth-logout" style="display:none">
-            Wyloguj
-          </button>
+          <button class="arcade-btn auth-register">Utwórz konto</button>
+          <button class="arcade-btn auth-guest">Gość</button>
+          <button class="arcade-btn auth-logout" style="display:none">Wyloguj</button>
+
           <span
             class="auth-forgot"
             style="cursor:pointer;font-size:11px;opacity:0.8;margin-left:8px;"
           >
             Przypomnij hasło
           </span>
-
 
           <span class="auth-error" style="margin-left:8px;font-size:11px;color:#fca5a5;"></span>
         </div>
@@ -54,32 +52,40 @@
     const pass2 = holder.querySelector(".auth-pass2");
     const status = holder.querySelector(".auth-status");
     const error = holder.querySelector(".auth-error");
-    const btnLog = holder.querySelector(".auth-login");
-    const btnReg = holder.querySelector(".auth-register");
-    const btnGst = holder.querySelector(".auth-guest");
-    const btnOut = holder.querySelector(".auth-logout");
-    const btnFgt = holder.querySelector(".auth-forgot");
 
-      let mode = "login"; // "login" | "register"
-      
-      function switchToLoginMode() {
-        mode = "login";
-        pass2.style.display = "none";
-        btnLogin.textContent = "Zaloguj";
-        btnRegister.textContent = "Utwórz konto";
-      }
-      
-      function switchToRegisterMode() {
-        mode = "register";
-        pass2.style.display = "inline-block";
-        btnLogin.textContent = "Zarejestruj";
-        btnRegister.textContent = "Mam konto – zaloguj";
-      }
+    const btnLogin = holder.querySelector(".auth-login");
+    const btnRegister = holder.querySelector(".auth-register");
+    const btnGuest = holder.querySelector(".auth-guest");
+    const btnLogout = holder.querySelector(".auth-logout");
+    const btnForgot = holder.querySelector(".auth-forgot");
 
-    
-    const afterLogin = holder.getAttribute("data-after-login") || null;
-    const afterGuest = holder.getAttribute("data-after-guest") || null;
     const checkHash = holder.hasAttribute("data-check-signup-hash");
+
+    // tryb logowanie / rejestracja
+    let mode = "login";
+
+    function switchToLoginMode() {
+      mode = "login";
+      pass2.style.display = "none";
+      btnLogin.textContent = "Zaloguj";
+      btnRegister.textContent = "Utwórz konto";
+    }
+
+    function switchToRegisterMode() {
+      mode = "register";
+      pass2.style.display = "inline-block";
+      btnLogin.textContent = "Zarejestruj";
+      btnRegister.textContent = "Mam konto – zaloguj";
+    }
+
+    // przełącznik trybu logowanie/rejestracja
+    btnRegister.addEventListener("click", () => {
+      if (mode === "login") {
+        switchToRegisterMode();
+      } else {
+        switchToLoginMode();
+      }
+    });
 
     const opts = {
       email,
@@ -92,8 +98,10 @@
       btnGuest,
       btnLogout,
       btnForgot,
-      checkSignupHash,
-    
+      checkSignupHash: checkHash,
+      mode,
+
+      // po każdej akcji – odśwież stronę
       onLoginSuccess() {
         window.location.reload();
       },
@@ -108,26 +116,6 @@
       },
     };
 
-
-    btnRegister.addEventListener("click", () => {
-      if (mode === "login") {
-        switchToRegisterMode();
-      } else {
-        switchToLoginMode();
-      }
-    });
-
-    if (afterLogin) {
-      opts.onLoginSuccess = () => {
-        window.location.href = afterLogin;
-      };
-    }
-    if (afterGuest) {
-      opts.onGuest = () => {
-        window.location.href = afterGuest;
-      };
-    }
-
     ArcadeAuthUI.initLoginPanel(opts);
   }
 
@@ -136,7 +124,6 @@
     holders.forEach(initPanel);
   });
 
-  // ręczne API (na przyszłość)
   window.ArcadeAuthBar = {
     mount(holder) {
       initPanel(holder);
