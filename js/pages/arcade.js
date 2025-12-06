@@ -8,7 +8,7 @@
   const BACK_BTN_SELECTOR = "#back-to-categories";
 
   let categories = [];
-  const gameMetaCache = new Map(); // cache meta.json
+  const gameMetaCache = new Map();
 
   function $(sel) {
     return document.querySelector(sel);
@@ -71,7 +71,7 @@
   }
 
   // ------------------------------
-  // Render kategorii
+  // Render kategorii jako kart
   // ------------------------------
 
   function renderCategoryCards() {
@@ -98,28 +98,31 @@
     const frag = document.createDocumentFragment();
 
     categories.forEach((cat) => {
-      const el = document.createElement("button");
-      el.type = "button";
-      el.className = "arcade-card arcade-category-card";
-
       const icon = cat.icon || "🎮";
       const count = (cat.games && cat.games.length) || 0;
 
-      el.innerHTML = `
-        <div class="arcade-card-icon">${icon}</div>
-        <div class="arcade-card-body">
-          <div class="arcade-card-title">${cat.name || cat.id}</div>
-          <div class="arcade-card-subtitle">
-            ${count === 1 ? "1 gra" : count + " gier"}
-          </div>
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "game-card category-card";
+
+      btn.innerHTML = `
+        <div class="game-headline">
+          <span class="game-icon">${icon}</span>
+          <span class="game-name">${cat.name || cat.id}</span>
+        </div>
+        <div class="game-desc">
+          ${count === 1 ? "1 gra w kategorii" : count + " gier w kategorii"}
+        </div>
+        <div class="game-footer">
+          <span class="pill">KATEGORIA</span>
         </div>
       `;
 
-      el.addEventListener("click", function () {
+      btn.addEventListener("click", function () {
         onCategoryClick(cat);
       });
 
-      frag.appendChild(el);
+      frag.appendChild(btn);
     });
 
     container.appendChild(frag);
@@ -155,13 +158,12 @@
       return;
     }
 
-    // Ładujemy meta każdej gry
     const promises = gameIds.map((id) => loadGameMeta(folder, id));
 
     Promise.all(promises)
       .then((allMeta) => {
         const valid = allMeta.filter(Boolean);
-        renderGameTiles(valid, gamesContainer);
+        renderGameCards(valid, gamesContainer, category);
       })
       .catch((err) => {
         console.error("[arcade] Błąd ładowania gier kategorii:", err);
@@ -190,12 +192,13 @@
       })
       .then((meta) => {
         if (!meta) return null;
-        gameMetaCache.set(cacheKey, {
+        const full = {
           ...meta,
           _folder: folder,
           _id: gameId,
-        });
-        return gameMetaCache.get(cacheKey);
+        };
+        gameMetaCache.set(cacheKey, full);
+        return full;
       })
       .catch((err) => {
         console.error("[arcade] Błąd meta.json dla", gameId, err);
@@ -207,7 +210,7 @@
   // Render kafelków gier
   // ------------------------------
 
-  function renderGameTiles(metas, container) {
+  function renderGameCards(metas, container, category) {
     if (!metas.length) {
       container.innerHTML =
         '<p class="arcade-empty">Ta kategoria ma 0 gier do wyświetlenia.</p>';
@@ -219,21 +222,37 @@
     metas.forEach((meta) => {
       const entry = meta.entry || "index.html";
       const href = `${meta._folder}/${meta._id}/${entry}`;
-      const icon = meta.icon || "🎮";
+      const icon = meta.icon || category.icon || "🎮";
+      const desc = meta.description || "";
 
       const card = document.createElement("a");
       card.href = href;
-      card.className = "arcade-card arcade-game-card";
+      card.className = "game-card";
 
       card.innerHTML = `
-        <div class="arcade-card-icon">${icon}</div>
-        <div class="arcade-card-body">
-          <div class="arcade-card-title">${meta.name || meta.id}</div>
-          <div class="arcade-card-subtitle">
-            ${meta.description || ""}
-          </div>
+        <div class="thumb-wrap">
+          <div class="thumb-placeholder">${icon}</div>
+        </div>
+        <div class="game-headline">
+          <span class="game-icon">${icon}</span>
+          <span class="game-name">${meta.name || meta.id}</span>
+        </div>
+        <div class="game-desc">${desc}</div>
+        <div class="game-footer">
+          <span class="pill">${category.name || category.id}</span>
+          <button class="play-btn" type="button">Graj</button>
         </div>
       `;
+
+      // kliknięcie w przycisk "Graj" nie powinno otwierać nowej karty,
+      // tylko po prostu wejść w href
+      const playBtn = card.querySelector(".play-btn");
+      if (playBtn) {
+        playBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          card.click();
+        });
+      }
 
       frag.appendChild(card);
     });
