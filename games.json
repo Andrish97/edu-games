@@ -1,18 +1,18 @@
 {
   "categories": [
+        {
+      "id": "language",
+      "name": "Gry językowe",
+      "icon": "📝",
+      "folder": "games/language",
+      "games": ["znajdz_slowo"]
+    },
     {
       "id": "classic",
       "name": "Gry klasyczne",
-      "icon": "",
+      "icon": "🎮",
       "folder": "games/classic",
       "games": ["2048"]
-    },
-    {
-      "id": "language",
-      "name": "Słownictwo",
-      "icon": "🧠",
-      "folder": "games/language",
-      "games": ["znajdz_slowo"]
     }
   ]
 }
