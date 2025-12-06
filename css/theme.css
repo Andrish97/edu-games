@@ -175,28 +175,36 @@ body.arcade-body {
 }
 
 /* Przycisk "Powrót do Arcade" dla gier */
-.arcade-backbtn {
+.arcade-back-btn {
   position: fixed;
-  top: 72px; /* było 16px */
-  left: 16px;
-  padding: 6px 14px;
+  top: 1.2rem;
+  left: 1.2rem;
+  z-index: 9999;
+  padding: 0.45rem 1rem;
   border-radius: 999px;
-  border: none;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+
+  background: rgba(15, 23, 42, 0.85);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+
+  transition: 0.15s ease;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #052e16;
-  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.5);
-  z-index: 30; /* trochę mniejsze niż 40, ale wyżej niż gra */
-  transition: transform 0.06s ease, box-shadow 0.06s ease, filter 0.08s ease;
 }
 
-
-.arcade-backbtn:hover {
+.arcade-back-btn:hover {
+  background: rgba(15, 23, 42, 1);
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(22, 163, 74, 0.65);
-  filter: brightness(1.05);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.8);
+}
+
+.arcade-back-btn:active {
+  transform: translateY(1px);
+  opacity: 0.7;
 }
 
 /* Niech "Przypomnij hasło" zawsze wygląda jak tekstowy link, a nie przycisk */
