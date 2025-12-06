@@ -60,6 +60,23 @@
     const btnOut = holder.querySelector(".auth-logout");
     const btnFgt = holder.querySelector(".auth-forgot");
 
+      let mode = "login"; // "login" | "register"
+      
+      function switchToLoginMode() {
+        mode = "login";
+        pass2.style.display = "none";
+        btnLogin.textContent = "Zaloguj";
+        btnRegister.textContent = "Utwórz konto";
+      }
+      
+      function switchToRegisterMode() {
+        mode = "register";
+        pass2.style.display = "inline-block";
+        btnLogin.textContent = "Zarejestruj";
+        btnRegister.textContent = "Mam konto – zaloguj";
+      }
+
+    
     const afterLogin = holder.getAttribute("data-after-login") || null;
     const afterGuest = holder.getAttribute("data-after-guest") || null;
     const checkHash = holder.hasAttribute("data-check-signup-hash");
@@ -70,13 +87,35 @@
       pass2,
       status,
       error,
-      btnLogin: btnLog,
-      btnRegister: btnReg,
-      btnGuest: btnGst,
-      btnLogout: btnOut,
-      btnForgot: btnFgt,
-      checkSignupHash: checkHash,
+      btnLogin,
+      btnRegister,
+      btnGuest,
+      btnLogout,
+      btnForgot,
+      checkSignupHash,
+    
+      onLoginSuccess() {
+        window.location.reload();
+      },
+      onRegisterSuccess() {
+        window.location.reload();
+      },
+      onLogout() {
+        window.location.reload();
+      },
+      onGuest() {
+        window.location.reload();
+      },
     };
+
+
+    btnRegister.addEventListener("click", () => {
+      if (mode === "login") {
+        switchToRegisterMode();
+      } else {
+        switchToLoginMode();
+      }
+    });
 
     if (afterLogin) {
       opts.onLoginSuccess = () => {
