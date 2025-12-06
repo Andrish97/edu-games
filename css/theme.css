@@ -227,37 +227,22 @@ body.arcade-body {
    <body class="arcade-body arcade-game-page">
 */
 
+
 .arcade-game-page {
   min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden; /* brak scrolla */
   display: flex;
   flex-direction: column;
 }
 
-/* shell jako elastyczny kontener:
-   karta gry jest wycentrowana,
-   a całość stara się mieścić w oknie */
+/* główny kontener gry */
 .arcade-game-page .shell {
-  flex: 1;
+  flex: 1 1 auto;
+  height: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 1.5rem 1rem;
-}
-
-/* karta gry (np. .card.game-root) – wspólne ograniczenia */
-.arcade-game-page .card.game-root {
-  width: 100%;
-  max-width: 720px;
-}
-
-/* Gdy okno jest niskie – trochę mniej paddingu,
-   żeby gra łatwiej się mieściła */
-@media (max-height: 720px) {
-  .arcade-game-page .shell {
-    padding-block: 0.75rem;
-  }
-
-  .arcade-game-page .card.game-root {
-    padding: 1rem 1.2rem;
-  }
+  align-items: center; /* karta w pionie wycentrowana */
+  overflow: hidden;
+  padding: 0;
 }
