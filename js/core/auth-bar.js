@@ -37,10 +37,9 @@
             Wyloguj
           </button>
 
-          <button class="btn-link auth-forgot" type="button">
+          <button class="auth-forgot" type="button">
             Przypomnij hasło
           </button>
-
           <span class="auth-error" style="margin-left:8px;font-size:11px;"></span>
         </div>
       </div>
