@@ -37,9 +37,23 @@
             Wyloguj
           </button>
 
-          <button class="auth-forgot" type="button">
-            Przypomnij hasło
-          </button>
+            <button
+              class="auth-forgot"
+              type="button"
+              style="
+                background: none;
+                border: none;
+                color: inherit;
+                font-size: 11px;
+                opacity: 0.8;
+                margin-left: 8px;
+                padding: 0;
+                cursor: pointer;
+                text-decoration: underline;
+              "
+            >
+              Przypomnij hasło
+            </button>
           <span class="auth-error" style="margin-left:8px;font-size:11px;"></span>
         </div>
       </div>
