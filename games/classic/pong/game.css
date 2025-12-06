@@ -1,1 +1,102 @@
+/* KARTA GRY POD PONGA */
+
+.game-root.pong-root {
+  border-radius: 1rem;
+  background: radial-gradient(circle at center, #020617, #000000 70%);
+  padding: 1.2rem 1.4rem 1.4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* NAGŁÓWEK */
+
+.game-header {
+  margin-bottom: 0.9rem;
+}
+
+.game-title {
+  font-size: 1.7rem;
+  margin: 0;
+}
+
+.game-subtitle {
+  margin: 0.25rem 0 0;
+  opacity: 0.85;
+  font-size: 0.9rem;
+}
+
+/* OBSZAR GRY */
+
+.pong-layout {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  /* Zachowaj proporcje pola gry */
+  aspect-ratio: 16 / 9;
+}
+
+/* Canvas w środku – pełne wypełnienie obszaru */
+.pong-layout canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, #0b1120, #020617 70%);
+}
+
+/* Wynik wewnątrz obszaru gry */
+
+.pong-score {
+  position: absolute;
+  top: 1.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2.4rem;
+  text-shadow: 0 0 10px #22c55e, 0 0 18px #22c55e;
+  letter-spacing: 0.35em;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Trochę RWD */
+
+@media (max-width: 640px) {
+  .game-root.pong-root {
+    padding: 1rem 1rem 1.1rem;
+  }
+
+  .game-title {
+    font-size: 1.4rem;
+  }
+
+  .game-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .pong-score {
+    font-size: 2rem;
+    top: 1rem;
+    letter-spacing: 0.25em;
+  }
+}
+
+@media (max-height: 720px) {
+  .game-root.pong-root {
+    padding: 0.8rem 1rem 0.9rem;
+  }
+
+  .game-title {
+    font-size: 1.3rem;
+  }
+
+  .game-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .pong-score {
+    font-size: 1.9rem;
+    top: 0.8rem;
+  }
+}
 
