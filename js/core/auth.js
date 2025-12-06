@@ -90,29 +90,26 @@ window.ArcadeAuth = {
    * Rejestracja – wymusza potwierdzenie mailowe.
    * Po sukcesie NIE logujemy od razu – user musi kliknąć link z maila.
    */
-  async signUp(email, password) {
-    if (!supabaseClient) {
-      throw new Error("Brak połączenia z serwerem.");
-    }
-    const redirectUrl = `${window.location.origin}${window.location.pathname.replace(
-      /\/[^/]*$/,
-      ""
-    )}/confirm.html`;
+async signUp(email, password) {
+  if (!supabaseClient) {
+    throw new Error("Brak połączenia z serwerem.");
+  }
 
-    const { data, error } = await supabaseClient.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
+  const redirectUrl = `${ARCADE_BASE_URL}/confirm.html`;
 
-    if (error) {
-      throw new Error(formatAuthError(error));
-    }
-    // tu zwykle data.user ma email_confirmed_at = null
-    return data;
-  },
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: redirectUrl,
+    },
+  });
+
+  if (error) {
+    throw new Error(formatAuthError(error));
+  }
+  return data;
+},
 
   async signOut() {
     if (!supabaseClient) return;
@@ -122,33 +119,30 @@ window.ArcadeAuth = {
    * Reset hasła – wysłanie maila z linkiem do zmiany hasła
    */
   async resetPassword(email) {
-    if (!supabaseClient) {
-      throw new Error("Brak połączenia z serwerem.");
+  if (!supabaseClient) {
+    throw new Error("Brak połączenia z serwerem.");
+  }
+
+  if (!email || !email.trim()) {
+    throw new Error("Podaj adres e-mail.");
+  }
+
+  const redirectUrl = `${ARCADE_BASE_URL}/reset.html`;
+
+  const { data, error } = await supabaseClient.auth.resetPasswordForEmail(
+    email,
+    {
+      redirectTo: redirectUrl,
     }
+  );
 
-    if (!email || !email.trim()) {
-      throw new Error("Podaj adres e-mail.");
-    }
+  if (error) {
+    throw new Error(formatAuthError(error));
+  }
 
-    // adres, na który Supabase przekieruje po kliknięciu w link z maila
-    const redirectUrl = `${window.location.origin}${window.location.pathname.replace(
-      /\/[^/]*$/,
-      ""
-    )}/reset.html`;
+  return data;
+},
 
-    const { data, error } = await supabaseClient.auth.resetPasswordForEmail(
-      email,
-      {
-        redirectTo: redirectUrl,
-      }
-    );
-
-    if (error) {
-      throw new Error(formatAuthError(error));
-    }
-
-    return data;
-  },
 
   
   /**
