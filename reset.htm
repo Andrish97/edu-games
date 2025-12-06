@@ -17,6 +17,7 @@
       document.addEventListener("DOMContentLoaded", async () => {
         const statusEl = document.querySelector(".reset-status");
         const errorEl = document.querySelector(".reset-error");
+        const formEl = document.querySelector(".reset-form");
         const pass1 = document.querySelector(".reset-pass1");
         const pass2 = document.querySelector(".reset-pass2");
         const btn = document.querySelector(".reset-submit");
@@ -28,15 +29,48 @@
           if (errorEl) errorEl.textContent = msg || "";
         }
 
-        // sprawdź, czy URL zawiera type=recovery – jeśli nie, to raczej ktoś tu wszedł „na pieszo”
+        // ---- Parsowanie #hash z Supabase ----
         const hash = window.location.hash || "";
-        if (!hash.includes("type=recovery")) {
-          setStatus(
-            "Link do resetu hasła jest niepoprawny lub wygasł. Wejdź przez link z e-maila."
-          );
-        } else {
-          setStatus("Ustaw nowe hasło do swojego konta.");
+        // zamieniamy "#a=b&c=d" na obiekt { a: 'b', c: 'd' }
+        const params = {};
+        if (hash.startsWith("#")) {
+          const q = hash.substring(1);
+          q.split("&").forEach((pair) => {
+            const [k, v] = pair.split("=");
+            if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || "");
+          });
         }
+
+        const hasError = !!params.error || !!params.error_code;
+        const isExpired =
+          params.error_code === "otp_expired" ||
+          (params.error_description || "").toLowerCase().includes("expired");
+        const isRecovery = params.type === "recovery";
+
+        if (hasError) {
+          // link nie działa (np. otp_expired)
+          formEl.style.display = "none";
+          setStatus(
+            "Link do resetu hasła jest nieprawidłowy lub wygasł. Użyj opcji „Przypomnij hasło” ponownie, aby dostać nowy link."
+          );
+          if (isExpired) {
+            setError("Ten link resetujący hasło już wygasł.");
+          }
+          return;
+        }
+
+        if (!isRecovery || !params.access_token) {
+          // ktoś wszedł tu ręcznie / bez poprawnego linku Supabase
+          formEl.style.display = "none";
+          setStatus(
+            "Brak poprawnego linku resetującego hasło. Wejdź na tę stronę przez link z e-maila."
+          );
+          return;
+        }
+
+        // Mamy poprawny link recovery – możemy pokazać formularz
+        formEl.style.display = "block";
+        setStatus("Ustaw nowe hasło do swojego konta.");
 
         btn.addEventListener("click", async () => {
           setError("");
@@ -67,11 +101,12 @@
               return;
             }
             setStatus(
-              "Hasło zostało zmienione. Możesz teraz zalogować się na stronie głównej."
+              "Hasło zostało zmienione. Możesz teraz zalogować się na stronie logowania."
             );
+            formEl.style.display = "none";
           } catch (e) {
             console.error("[reset] unexpected error:", e);
-            setError("Nie udało się zmienić hasła.");
+            setError("Nie udało się zmienić hasła. Spróbuj ponownie.");
           }
         });
       });
@@ -93,7 +128,7 @@
           Ładuję stan resetu hasła...
         </p>
 
-        <div class="reset-form">
+        <div class="reset-form" style="display:none">
           <input
             type="password"
             class="arcade-input reset-pass1"
