@@ -1,5 +1,5 @@
 // js/arcade.js
-// Prosta lista gier bez przycisków kategorii
+// Render listy gier do #games
 
 (function () {
   function createEl(tag, className, children) {
@@ -45,7 +45,11 @@
         ]);
 
         const footer = createEl("div", "arcade-game-footer");
-        const playBtn = createEl("a", "arcade-game-play-btn arcade-btn", ["Graj"]);
+        const playBtn = createEl(
+          "a",
+          "arcade-game-play-btn arcade-btn",
+          ["Graj"]
+        );
         playBtn.href = game.playUrl;
 
         footer.appendChild(playBtn);
@@ -64,7 +68,7 @@
   async function initArcade() {
     const root = document.getElementById("games");
     if (!root) {
-      console.error('Brak elementu #games w arcade.html – nie mam gdzie wyrenderować listy.');
+      console.error("Brak elementu #games w arcade.html");
       return;
     }
 
