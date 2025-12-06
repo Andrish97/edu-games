@@ -115,7 +115,39 @@ window.ArcadeAuth = {
     if (!supabaseClient) return;
     await supabaseClient.auth.signOut();
   },
+  /**
+   * Reset hasła – wysłanie maila z linkiem do zmiany hasła
+   */
+  async resetPassword(email) {
+    if (!supabaseClient) {
+      throw new Error("Brak połączenia z serwerem.");
+    }
 
+    if (!email || !email.trim()) {
+      throw new Error("Podaj adres e-mail.");
+    }
+
+    // adres, na który Supabase przekieruje po kliknięciu w link z maila
+    const redirectUrl = `${window.location.origin}${window.location.pathname.replace(
+      /\/[^/]*$/,
+      ""
+    )}/reset.html`;
+
+    const { data, error } = await supabaseClient.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: redirectUrl,
+      }
+    );
+
+    if (error) {
+      throw new Error(formatAuthError(error));
+    }
+
+    return data;
+  },
+
+  
   /**
    * Wymuś gościa: jeśli user zalogowany → przekieruj do arcade.
    * Używane na index.html.
@@ -295,8 +327,22 @@ window.ArcadeAuthUI = {
     }
 
     if (btnForgot) {
-      btnForgot.addEventListener("click", () => {
-        setError("Reset hasła jeszcze nie jest dostępny.");
+      btnForgot.addEventListener("click", async () => {
+        setError("");
+        const mail = email.value.trim();
+        if (!mail) {
+          setError("Podaj e-mail, aby zresetować hasło.");
+          return;
+        }
+        try {
+          await ArcadeAuth.resetPassword(mail);
+          setStatus(
+            "Wysłaliśmy wiadomość z linkiem do zmiany hasła. Sprawdź skrzynkę e-mail."
+          );
+        } catch (e) {
+          console.error("[ArcadeAuthUI] resetPassword error:", e);
+          setError(e.message || "Nie udało się wysłać maila resetującego hasło.");
+        }
       });
     }
   },
