@@ -1,26 +1,39 @@
 const GAME_ID = "neon-pong";
 
-const MODE_WALL = "wall"; // Trening: Ściana
-const MODE_AI = "ai"; // Pojedynek z AI
+const MODE_WALL = "wall"; // Ściana
+const MODE_AI = "ai";     // Pojedynek z AI
 
 let currentMode = MODE_WALL;
 
 let canvas, ctx;
 
-// Paletki poziome
+// Paletki (pionowe kloce)
 let bottomPaddle, topPaddle;
 
 // Piłka
 let ball;
 
-// Wyniki
+// Wyniki bieżącej rozgrywki
 let playerScore = 0;
 let enemyScore = 0;
 
-const paddleWidth = 140;
-const paddleHeight = 14;
+// Paletka: węższa w poziomie, wyższa w pionie
+const paddleWidth = 80;
+const paddleHeight = 30;
 const paddleMargin = 40;
 const ballRadius = 10;
+
+// Statystyki per tryb (rekord + licznik gier)
+const stats = {
+  [MODE_WALL]: {
+    bestScore: 0,
+    gamesPlayed: 0
+  },
+  [MODE_AI]: {
+    bestScore: 0,
+    gamesPlayed: 0
+  }
+};
 
 // Klawisze
 const keys = {
@@ -34,49 +47,105 @@ const keys = {
   ArrowDown: false
 };
 
-/* ===============================
-   ArcadeProgress — szkielet
-=============================== */
-
+// Progres / guardy
 let hasUnsavedChanges = false;
 let LAST_SAVE_DATA = null;
+let isPaused = false;
+
+/* ============================
+   Pomocnicze
+============================ */
+
+function W() {
+  return canvas.width;
+}
+function H() {
+  return canvas.height;
+}
+
+function getEl(id) {
+  return document.getElementById(id);
+}
+
+/* ============================
+   ArcadeProgress
+============================ */
 
 function loadProgress() {
-  if (!window.ArcadeProgress) return Promise.resolve();
+  if (!window.ArcadeProgress || !ArcadeProgress.load) {
+    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.load");
+    return Promise.resolve();
+  }
 
   return ArcadeProgress.load(GAME_ID)
     .then(data => {
+      if (data && typeof data === "object") {
+        if (data.wall) {
+          stats[MODE_WALL].bestScore = data.wall.bestScore || 0;
+          stats[MODE_WALL].gamesPlayed = data.wall.gamesPlayed || 0;
+        }
+        if (data.ai) {
+          stats[MODE_AI].bestScore = data.ai.bestScore || 0;
+          stats[MODE_AI].gamesPlayed = data.ai.gamesPlayed || 0;
+        }
+      }
       LAST_SAVE_DATA = data || null;
+      hasUnsavedChanges = false;
     })
-    .catch(err => console.error(err));
+    .catch(err => {
+      console.error("[GAME]", GAME_ID, "Błąd load:", err);
+    });
 }
 
 function buildSavePayload() {
-  return {};
+  return {
+    wall: {
+      bestScore: stats[MODE_WALL].bestScore,
+      gamesPlayed: stats[MODE_WALL].gamesPlayed
+    },
+    ai: {
+      bestScore: stats[MODE_AI].bestScore,
+      gamesPlayed: stats[MODE_AI].gamesPlayed
+    }
+  };
 }
 
 function saveCurrentSession() {
-  if (!window.ArcadeProgress) return Promise.resolve();
+  if (!window.ArcadeProgress || !ArcadeProgress.save) {
+    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.save");
+    // nawet bez ArcadeProgress – pauzujemy
+    isPaused = true;
+    updatePauseButton();
+    hasUnsavedChanges = false;
+    return Promise.resolve();
+  }
 
   const payload = buildSavePayload();
 
-  return ArcadeProgress.save(GAME_ID, payload).then(() => {
-    LAST_SAVE_DATA = payload;
-    hasUnsavedChanges = false;
-  });
+  return ArcadeProgress.save(GAME_ID, payload)
+    .then(() => {
+      LAST_SAVE_DATA = payload;
+      hasUnsavedChanges = false;
+      // po zapisie – pauza z automatu
+      isPaused = true;
+      updatePauseButton();
+      console.log("[GAME]", GAME_ID, "zapisano:", payload);
+    })
+    .catch(err => {
+      console.error("[GAME]", GAME_ID, "Błąd save:", err);
+    });
 }
 
-function clearProgress() {
-  if (!window.ArcadeProgress) return Promise.resolve();
-  return ArcadeProgress.clear(GAME_ID).then(() => {
-    LAST_SAVE_DATA = null;
-    hasUnsavedChanges = false;
-  });
+function clearRecordForCurrentMode() {
+  const s = stats[currentMode];
+  s.bestScore = 0;
+  hasUnsavedChanges = true;
+  updateStatsUI();
 }
 
-/* ===============================
-   Guardy (opcjonalne)
-=============================== */
+/* ============================
+   Guardy wychodzenia
+============================ */
 
 function setupBeforeUnloadGuard() {
   window.addEventListener("beforeunload", e => {
@@ -95,38 +164,33 @@ function setupClickGuard() {
 
     const href = target.getAttribute("href");
     const isBack =
-      (href && href.includes("arcade.html")) ||
+      (href && href.indexOf("arcade.html") !== -1) ||
       target.classList.contains("arcade-back-btn");
 
     if (isBack) {
-      const ok = confirm("Masz niezapisany postęp. Wyjść?");
-      if (!ok) e.preventDefault();
+      const ok = window.confirm(
+        "Masz niezapisane statystyki. Wyjść bez zapisywania?"
+      );
+      if (!ok) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     }
   });
 }
 
-/* ===============================
-   Rozmiar canvas
-=============================== */
-
-function W() {
-  return canvas.width;
-}
-function H() {
-  return canvas.height;
-}
+/* ============================
+   Rozmiar canvas i obiekty
+============================ */
 
 function resizeCanvas() {
-  const rect = canvas.parentElement.getBoundingClientRect();
+  const container = canvas.parentElement;
+  const rect = container.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
 }
 
-/* ===============================
-   Paletki + piłka
-=============================== */
-
-function setupObjects() {
+function setupPaddles() {
   bottomPaddle = {
     x: W() / 2 - paddleWidth / 2,
     y: H() - paddleMargin,
@@ -140,53 +204,99 @@ function setupObjects() {
     width: paddleWidth,
     height: paddleHeight
   };
-
-  resetBall(true);
 }
 
-function resetBall(down) {
+function resetBall(startDown = true) {
   ball = {
     x: W() / 2,
     y: H() / 2,
     r: ballRadius,
     dx: (Math.random() > 0.5 ? 1 : -1) * 5,
-    dy: (down ? 1 : -1) * (4 + Math.random() * 2)
+    dy: (startDown ? 1 : -1) * (4 + Math.random() * 2)
   };
 }
 
-/* ===============================
+/* ============================
    Tryby gry
-=============================== */
+============================ */
 
-function setMode(mode) {
-  currentMode = mode;
+function setMode(newMode) {
+  if (newMode !== MODE_WALL && newMode !== MODE_AI) return;
+  currentMode = newMode;
+
+  // slider – przesunięcie
+  const slider = getEl("mode-toggle-slider");
+  if (slider) {
+    slider.style.transform =
+      currentMode === MODE_WALL ? "translateX(0%)" : "translateX(100%)";
+  }
+
+  // aktywne przyciski
+  document
+    .querySelectorAll(".mode-toggle__option")
+    .forEach(btn => {
+      const mode = btn.getAttribute("data-mode");
+      btn.classList.toggle("mode-toggle__option--active", mode === currentMode);
+    });
+
+  // etykieta rekordu
+  const recordLabel = getEl("record-label");
+  if (recordLabel) {
+    recordLabel.textContent =
+      currentMode === MODE_WALL
+        ? "Rekord – Ściana"
+        : "Rekord – Pojedynek z AI";
+  }
+
+  // wyczyść bieżącą rozgrywkę
   playerScore = 0;
   enemyScore = 0;
-  updateScore();
-
-  const wallBtn = document.getElementById("mode-wall-btn");
-  const aiBtn = document.getElementById("mode-ai-btn");
-
-  wallBtn.classList.toggle("mode-btn--active", mode === MODE_WALL);
-  aiBtn.classList.toggle("mode-btn--active", mode === MODE_AI);
-
+  updateScoreUI();
+  updateStatsUI();
   resetBall(true);
 }
 
-function updateScore() {
-  const score = document.getElementById("score");
-  score.innerText = `${playerScore} : ${enemyScore}`;
+/* ============================
+   UI – wyniki / statystyki
+============================ */
+
+function updateScoreUI() {
+  const scoreOverlay = getEl("score");
+  if (scoreOverlay) {
+    scoreOverlay.textContent = `${playerScore} : ${enemyScore}`;
+  }
+
+  const currentScoreEl = getEl("current-score");
+  if (currentScoreEl) {
+    currentScoreEl.textContent = String(playerScore);
+  }
 }
 
-/* ===============================
+function updateStatsUI() {
+  const currentStats = stats[currentMode];
+
+  const bestScoreEl = getEl("best-score");
+  const gamesPlayedEl = getEl("games-played");
+
+  if (bestScoreEl) bestScoreEl.textContent = String(currentStats.bestScore);
+  if (gamesPlayedEl)
+    gamesPlayedEl.textContent = String(currentStats.gamesPlayed);
+}
+
+function updatePauseButton() {
+  const pauseBtn = getEl("pause-btn");
+  if (!pauseBtn) return;
+  pauseBtn.textContent = isPaused ? "Wznów" : "Pauza";
+}
+
+/* ============================
    Sterowanie klawiszami
-=============================== */
+============================ */
 
 function setupKeyboard() {
   document.addEventListener("keydown", e => {
     if (e.key in keys) keys[e.key] = true;
   });
-
   document.addEventListener("keyup", e => {
     if (e.key in keys) keys[e.key] = false;
   });
@@ -206,12 +316,12 @@ function movePlayerKeyboard() {
   );
 }
 
-/* ===============================
-   Sterowanie: ZŁAP I PRZECIĄGNIJ
-=============================== */
+/* ============================
+   Sterowanie: złap i przeciągnij
+============================ */
 
 function setupGrabControls() {
-  let dragging = false;
+  let isDragging = false;
   let grabOffsetX = 0;
 
   function beginGrab(x, y) {
@@ -221,13 +331,13 @@ function setupGrabControls() {
       x > bottomPaddle.x &&
       x < bottomPaddle.x + bottomPaddle.width
     ) {
-      dragging = true;
+      isDragging = true;
       grabOffsetX = x - bottomPaddle.x;
     }
   }
 
   function dragTo(x) {
-    if (!dragging) return;
+    if (!isDragging) return;
     bottomPaddle.x = x - grabOffsetX;
 
     bottomPaddle.x = Math.max(
@@ -236,43 +346,50 @@ function setupGrabControls() {
     );
   }
 
+  function endDrag() {
+    isDragging = false;
+  }
+
+  // Mysz
   canvas.addEventListener("mousedown", e => {
-    const r = canvas.getBoundingClientRect();
-    beginGrab(e.clientX - r.left, e.clientY - r.top);
+    const rect = canvas.getBoundingClientRect();
+    beginGrab(e.clientX - rect.left, e.clientY - rect.top);
   });
 
   canvas.addEventListener("mousemove", e => {
-    const r = canvas.getBoundingClientRect();
-    dragTo(e.clientX - r.left);
+    const rect = canvas.getBoundingClientRect();
+    dragTo(e.clientX - rect.left);
   });
 
-  document.addEventListener("mouseup", () => (dragging = false));
+  document.addEventListener("mouseup", endDrag);
 
+  // Dotyk
   canvas.addEventListener("touchstart", e => {
     const t = e.touches[0];
-    const r = canvas.getBoundingClientRect();
-    beginGrab(t.clientX - r.left, t.clientY - r.top);
+    const rect = canvas.getBoundingClientRect();
+    beginGrab(t.clientX - rect.left, t.clientY - rect.top);
   });
 
   canvas.addEventListener("touchmove", e => {
     e.preventDefault();
     const t = e.touches[0];
-    const r = canvas.getBoundingClientRect();
-    dragTo(t.clientX - r.left);
+    const rect = canvas.getBoundingClientRect();
+    dragTo(t.clientX - rect.left);
   });
 
-  canvas.addEventListener("touchend", () => (dragging = false));
+  canvas.addEventListener("touchend", endDrag);
 }
 
-/* ===============================
+/* ============================
    AI
-=============================== */
+============================ */
 
 function moveAI() {
   if (currentMode !== MODE_AI) return;
 
-  const target = ball.x - topPaddle.width / 2;
-  topPaddle.x += (target - topPaddle.x) * 0.08;
+  const targetX = ball.x - topPaddle.width / 2;
+  const factor = 0.08;
+  topPaddle.x += (targetX - topPaddle.x) * factor;
 
   topPaddle.x = Math.max(
     0,
@@ -280,14 +397,16 @@ function moveAI() {
   );
 }
 
-/* ===============================
-   Fizyczne odbicia i punktacja
-=============================== */
+/* ============================
+   Logika kolizji i punktacja
+============================ */
 
-function physics() {
+function handlePhysicsAndScoring() {
+  // ruch piłki
   ball.x += ball.dx;
   ball.y += ball.dy;
 
+  // Odbicia od boków
   if (ball.x < ball.r) {
     ball.x = ball.r;
     ball.dx *= -1;
@@ -297,6 +416,7 @@ function physics() {
     ball.dx *= -1;
   }
 
+  // Dolna paletka (gracz)
   if (
     ball.y + ball.r > bottomPaddle.y &&
     ball.y - ball.r < bottomPaddle.y + bottomPaddle.height &&
@@ -308,26 +428,36 @@ function physics() {
     ball.y = bottomPaddle.y - ball.r;
     ball.dx += (Math.random() - 0.5) * 2;
 
+    // Ściana: odbicia liczone jako wynik
     if (currentMode === MODE_WALL) {
       playerScore++;
-      updateScore();
+      if (playerScore > stats[MODE_WALL].bestScore) {
+        stats[MODE_WALL].bestScore = playerScore;
+        hasUnsavedChanges = true;
+      }
+      updateScoreUI();
+      updateStatsUI();
     }
   }
 
   if (currentMode === MODE_WALL) {
+    // Góra to ściana
     if (ball.y < ball.r) {
       ball.y = ball.r;
       ball.dy *= -1;
     }
-    if (ball.y > H()) {
+
+    // Ucieczka dołem = strata
+    if (ball.y - ball.r > H()) {
       enemyScore++;
-      updateScore();
+      updateScoreUI();
       resetBall(true);
     }
   } else {
+    // Górna paletka (AI)
     if (
-      ball.y - ball.r <
-        topPaddle.y + topPaddle.height &&
+      ball.y - ball.r < topPaddle.y + topPaddle.height &&
+      ball.y + ball.r > topPaddle.y &&
       ball.x > topPaddle.x &&
       ball.x < topPaddle.x + topPaddle.width &&
       ball.dy < 0
@@ -337,26 +467,35 @@ function physics() {
       ball.dx += (Math.random() - 0.5) * 2;
     }
 
+    // Punkt dla gracza – piłka ucieka górą
     if (ball.y < 0) {
       playerScore++;
-      updateScore();
+      if (playerScore > stats[MODE_AI].bestScore) {
+        stats[MODE_AI].bestScore = playerScore;
+        hasUnsavedChanges = true;
+      }
+      updateScoreUI();
+      updateStatsUI();
       resetBall(true);
     }
+
+    // Punkt dla AI – piłka ucieka dołem
     if (ball.y > H()) {
       enemyScore++;
-      updateScore();
+      updateScoreUI();
       resetBall(false);
     }
   }
 }
 
-/* ===============================
-   Render
-=============================== */
+/* ============================
+   Rysowanie
+============================ */
 
 function draw() {
   ctx.clearRect(0, 0, W(), H());
 
+  // linia środkowa (pozioma)
   ctx.strokeStyle = "#1e293b";
   ctx.lineWidth = 4;
   ctx.setLineDash([20, 20]);
@@ -370,6 +509,7 @@ function draw() {
   ctx.shadowBlur = 15;
   ctx.shadowColor = "#22c55e";
 
+  // Dolna paletka
   ctx.fillRect(
     bottomPaddle.x,
     bottomPaddle.y,
@@ -377,6 +517,7 @@ function draw() {
     bottomPaddle.height
   );
 
+  // Górna – tylko w AI
   if (currentMode === MODE_AI) {
     ctx.fillRect(
       topPaddle.x,
@@ -386,6 +527,7 @@ function draw() {
     );
   }
 
+  // Piłka
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
   ctx.fill();
@@ -393,14 +535,15 @@ function draw() {
   ctx.shadowBlur = 0;
 }
 
-/* ===============================
+/* ============================
    Loop
-=============================== */
+============================ */
 
 function update() {
+  if (isPaused) return;
   movePlayerKeyboard();
   moveAI();
-  physics();
+  handlePhysicsAndScoring();
 }
 
 function loop() {
@@ -409,44 +552,119 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-/* ===============================
+/* ============================
+   Kontrolki: nowa gra / zapis / reset / pauza
+============================ */
+
+function startNewGame() {
+  const currentStats = stats[currentMode];
+  currentStats.gamesPlayed++;
+  hasUnsavedChanges = true;
+
+  playerScore = 0;
+  enemyScore = 0;
+  isPaused = false;
+  updatePauseButton();
+  updateScoreUI();
+  updateStatsUI();
+  resetBall(true);
+}
+
+function setupControlButtons() {
+  const newGameBtn = getEl("new-game-btn");
+  const saveBtn = getEl("save-game-btn");
+  const resetBtn = getEl("reset-record-btn");
+  const pauseBtn = getEl("pause-btn");
+
+  if (newGameBtn) {
+    newGameBtn.addEventListener("click", () => {
+      startNewGame();
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener("click", () => {
+      saveCurrentSession();
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      const ok = window.confirm(
+        "Wyzerować rekord tylko dla aktualnego trybu?"
+      );
+      if (!ok) return;
+      clearRecordForCurrentMode();
+    });
+  }
+
+  if (pauseBtn) {
+    pauseBtn.addEventListener("click", () => {
+      isPaused = !isPaused;
+      updatePauseButton();
+    });
+  }
+}
+
+/* ============================
+   Przełącznik trybów (slider)
+============================ */
+
+function setupModeToggle() {
+  const toggle = document.getElementById("mode-toggle");
+  if (!toggle) return;
+
+  toggle.addEventListener("click", e => {
+    const btn = e.target.closest(".mode-toggle__option");
+    if (!btn) return;
+    const mode = btn.getAttribute("data-mode");
+    if (!mode) return;
+    setMode(mode);
+  });
+}
+
+/* ============================
    Init
-=============================== */
+============================ */
 
 function initGame() {
-  canvas = document.getElementById("game");
+  canvas = getEl("game");
+  if (!canvas) {
+    console.error("[GAME]", GAME_ID, "Brak canvas#game");
+    return;
+  }
   ctx = canvas.getContext("2d");
 
   setupKeyboard();
-  setupGrabControls();
 
-  window.addEventListener("resize", () => {
-    resizeCanvas();
-    setupObjects();
-  });
-
+  // Po załadowaniu progresu
   loadProgress().then(() => {
     resizeCanvas();
-    setupObjects();
+    setupPaddles();
+    resetBall(true);
 
+    setupGrabControls();
     setupBeforeUnloadGuard();
     setupClickGuard();
+    setupControlButtons();
+    setupModeToggle();
 
-    if (window.ArcadeUI) {
+    // Przycisk powrotu
+    if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
       ArcadeUI.addBackToArcadeButton({
         backUrl: "../../../arcade.html"
       });
     }
 
-    document
-      .getElementById("mode-wall-btn")
-      .addEventListener("click", () => setMode(MODE_WALL));
+    // Startowy tryb – Ściana
+    setMode(MODE_WALL);
+    updatePauseButton();
 
-    document
-      .getElementById("mode-ai-btn")
-      .addEventListener("click", () => setMode(MODE_AI));
+    window.addEventListener("resize", () => {
+      resizeCanvas();
+      setupPaddles();
+    });
 
-    updateScore();
     loop();
   });
 }
