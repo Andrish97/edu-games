@@ -1,4 +1,6 @@
-/* KARTA GRY POD PONGA */
+/* ============================================
+   KARTA GRY – CONTAINER
+============================================ */
 
 .game-root.pong-root {
   border-radius: 1rem;
@@ -7,18 +9,20 @@
   position: relative;
   overflow: hidden;
 
-  /* Kluczowe: karta nie wyższa niż okno */
-  max-height: calc(100vh - 4.5rem); /* trochę miejsca na pasek auth-bar */
+  /* Najważniejsze — karta nie może wyjść poza okno */
+  max-height: calc(100vh - 4.2rem);
   display: flex;
   flex-direction: column;
 }
 
-/* Trochę pomagamy layoutowi strony gier */
+/* Przywracamy normalny layout — zamiast sztywnego centrowania */
 .arcade-game-page .shell {
-  align-items: stretch; /* zamiast sztywnego centrowania w pionie */
+  align-items: stretch;
 }
 
-/* NAGŁÓWEK */
+/* ============================================
+   HEADER: TYTUŁ + SUBTITLE
+============================================ */
 
 .game-header {
   display: flex;
@@ -36,8 +40,9 @@
 }
 
 .game-title {
-  font-size: 1.6rem;
   margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
 }
 
 .game-subtitle {
@@ -46,7 +51,9 @@
   font-size: 0.85rem;
 }
 
-/* Ładny slider trybów */
+/* ============================================
+   TRYB: SLIDER (ŚCIANA / AI)
+============================================ */
 
 .mode-toggle {
   position: relative;
@@ -66,9 +73,11 @@
   bottom: 3px;
   left: 3px;
   width: calc(50% - 3px);
+
   border-radius: 999px;
   background: linear-gradient(135deg, #22c55e, #16a34a);
   box-shadow: 0 0 22px rgba(34, 197, 94, 0.8);
+
   transition: transform 0.18s ease-out;
   z-index: 0;
 }
@@ -92,7 +101,9 @@
   color: #022c22;
 }
 
-/* PANEL STATYSTYK / PRZYCISKÓW */
+/* ============================================
+   PANEL STATYSTYK + PRZYCISKI
+============================================ */
 
 .game-header-side {
   display: flex;
@@ -131,6 +142,10 @@
   margin-top: 0.08rem;
 }
 
+/* ============================================
+   NEONOWE PRZYCISKI – NOWA GRA / ZAPISZ / RESET / PAUZA
+============================================ */
+
 .controls-panel {
   display: flex;
   flex-wrap: wrap;
@@ -138,16 +153,73 @@
   justify-content: flex-end;
 }
 
-.btn-sm {
-  padding: 0.28rem 0.7rem;
-  font-size: 0.76rem;
+.pong-root .controls-panel button {
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  padding: 0.32rem 0.85rem;
+  font-size: 0.75rem;
+
+  background: radial-gradient(circle at 0% 0%, #22c55e, #16a34a 60%);
+  color: #022c22;
+
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.5),
+    0 8px 22px rgba(22, 163, 74, 0.7);
+
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    filter 0.12s ease,
+    background 0.16s ease;
 }
 
-.btn-secondary {
-  background: rgba(30, 64, 175, 0.85);
+.pong-root .controls-panel button:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.75),
+    0 10px 28px rgba(22, 163, 74, 0.95);
+  filter: brightness(1.06);
 }
 
-/* OBSZAR GRY – KLUCZOWE ZMIANY */
+.pong-root .controls-panel button:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.6),
+    0 4px 16px rgba(22, 163, 74, 0.6);
+  filter: brightness(0.92);
+}
+
+/* Pauza — niebieska */
+.pong-root .controls-panel .btn-secondary {
+  background: radial-gradient(circle at 0% 0%, #38bdf8, #1d4ed8 60%);
+  color: #e5f2ff;
+
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.5),
+    0 8px 22px rgba(37, 99, 235, 0.7);
+}
+
+.pong-root .controls-panel .btn-secondary:hover {
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.75),
+    0 10px 28px rgba(37, 99, 235, 1);
+}
+
+/* Zmniejszony wariant */
+.pong-root .controls-panel .btn-sm {
+  padding: 0.28rem 0.75rem;
+  font-size: 0.72rem;
+}
+
+/* ============================================
+   POLE GRY (CANVAS)
+============================================ */
 
 .pong-layout {
   position: relative;
@@ -155,21 +227,20 @@
   max-width: 640px;
   margin: 0 auto;
 
-  /* Zamiast sztywnego aspect-ratio, kontrolujemy wysokość */
+  /* klucz — dynamiczne dopasowanie */
   flex: 1 1 auto;
   min-height: 220px;
-  max-height: calc(100% - 2.3rem); /* zostawiamy trochę miejsca na hint pod spodem */
+  max-height: calc(100% - 2rem);
 }
 
 .pong-layout canvas {
   display: block;
   width: 100%;
-  height: 100%;           /* pełne wypełnienie dostępnej wysokości */
+  height: 100%;
   background: radial-gradient(circle at center, #0b1120, #020617 70%);
 }
 
-/* Wynik na środku planszy */
-
+/* Wynik na planszy */
 .pong-score {
   position: absolute;
   top: 0.9rem;
@@ -182,38 +253,30 @@
   pointer-events: none;
 }
 
-/* Podpowiedź pod planszą */
-
 .pong-hint {
   margin-top: 0.55rem;
   font-size: 0.78rem;
   opacity: 0.7;
 }
 
-/* RWD – małe szerokości */
+/* ============================================
+   RWD – SZEROKOŚĆ
+============================================ */
 
 @media (max-width: 768px) {
   .game-header {
     flex-direction: column;
     align-items: stretch;
   }
-
   .game-header-side {
     align-items: flex-start;
   }
-
   .stats-panel,
   .controls-panel {
     justify-content: flex-start;
   }
-
   .game-title {
-    font-size: 1.45rem;
-  }
-
-  .pong-score {
-    font-size: 1.9rem;
-    top: 0.8rem;
+    font-size: 1.5rem;
   }
 }
 
@@ -221,48 +284,39 @@
   .game-root.pong-root {
     padding: 0.7rem 0.7rem 0.8rem;
   }
-
   .game-subtitle {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
   }
-
   .mode-toggle__option {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
   }
 }
 
-/* RWD – niskie ekrany */
+/* ============================================
+   RWD – WYSOKOŚĆ
+============================================ */
 
 @media (max-height: 720px) {
   .game-root.pong-root {
     padding: 0.6rem 0.7rem 0.7rem;
-    max-height: calc(100vh - 3.8rem);
+    max-height: calc(100vh - 3.5rem);
   }
 
   .game-title {
     font-size: 1.35rem;
   }
 
-  .game-subtitle {
-    font-size: 0.78rem;
-  }
-
   .stat-box {
     padding: 0.32rem 0.55rem;
   }
 
-  .stat-value {
-    font-size: 0.95rem;
-  }
-
   .pong-layout {
-    min-height: 200px;
+    min-height: 190px;
   }
 
   .pong-score {
-    font-size: 1.7rem;
+    font-size: 1.8rem;
     top: 0.7rem;
-    letter-spacing: 0.24em;
   }
 
   .pong-hint {
