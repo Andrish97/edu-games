@@ -142,9 +142,9 @@
 .pong-layout {
   position: relative;
   width: 100%;
-  max-width: 960px;
+  max-width: 640px;
   margin: 0 auto;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 9 / 16;
 }
 
 .pong-layout canvas {
