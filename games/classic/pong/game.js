@@ -17,7 +17,7 @@ let ball;
 let playerScore = 0;
 let enemyScore = 0;
 
-// Paletka: węższa w poziomie, wyższa w pionie
+// Paletka: klasyczna – szeroka i niska
 const paddleWidth = 140;
 const paddleHeight = 14;
 const paddleMargin = 40;
@@ -53,7 +53,7 @@ let LAST_SAVE_DATA = null;
 let isPaused = false;
 
 /* ============================
-   Pomocnicze
+   Helpers
 ============================ */
 
 function W() {
@@ -68,7 +68,7 @@ function getEl(id) {
 }
 
 /* ============================
-   ArcadeProgress
+   ArcadeProgress – LOAD / SAVE
 ============================ */
 
 function loadProgress() {
@@ -78,19 +78,35 @@ function loadProgress() {
   }
 
   return ArcadeProgress.load(GAME_ID)
-    .then(data => {
-      if (data && typeof data === "object") {
-        if (data.wall) {
-          stats[MODE_WALL].bestScore = data.wall.bestScore || 0;
-          stats[MODE_WALL].gamesPlayed = data.wall.gamesPlayed || 0;
-        }
-        if (data.ai) {
-          stats[MODE_AI].bestScore = data.ai.bestScore || 0;
-          stats[MODE_AI].gamesPlayed = data.ai.gamesPlayed || 0;
+    .then(raw => {
+      let data = raw;
+
+      // Jeśli z jakiegoś powodu dostajemy string, spróbujmy go sparsować
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch (e) {
+          console.warn("[GAME]", GAME_ID, "Nie udało się sparsować JSONa progresu:", e);
+          data = null;
         }
       }
+
+      if (data && typeof data === "object") {
+        if (data.wall && typeof data.wall === "object") {
+          stats[MODE_WALL].bestScore = Number(data.wall.bestScore || 0);
+          stats[MODE_WALL].gamesPlayed = Number(data.wall.gamesPlayed || 0);
+        }
+        if (data.ai && typeof data.ai === "object") {
+          stats[MODE_AI].bestScore = Number(data.ai.bestScore || 0);
+          stats[MODE_AI].gamesPlayed = Number(data.ai.gamesPlayed || 0);
+        }
+      }
+
       LAST_SAVE_DATA = data || null;
       hasUnsavedChanges = false;
+
+      // Po wczytaniu – od razu odśwież UI statystyk
+      updateStatsUI();
     })
     .catch(err => {
       console.error("[GAME]", GAME_ID, "Błąd load:", err);
@@ -111,16 +127,16 @@ function buildSavePayload() {
 }
 
 function saveCurrentSession() {
+  const payload = buildSavePayload();
+
   if (!window.ArcadeProgress || !ArcadeProgress.save) {
-    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.save");
-    // nawet bez ArcadeProgress – pauzujemy
+    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.save – zapis lokalny tylko w sesji");
+    LAST_SAVE_DATA = payload;
+    hasUnsavedChanges = false;
     isPaused = true;
     updatePauseButton();
-    hasUnsavedChanges = false;
     return Promise.resolve();
   }
-
-  const payload = buildSavePayload();
 
   return ArcadeProgress.save(GAME_ID, payload)
     .then(() => {
@@ -257,7 +273,7 @@ function setMode(newMode) {
 }
 
 /* ============================
-   UI – wyniki / statystyki
+   UI – wyniki / statystyki / pauza
 ============================ */
 
 function updateScoreUI() {
@@ -274,13 +290,11 @@ function updateScoreUI() {
 
 function updateStatsUI() {
   const currentStats = stats[currentMode];
-
   const bestScoreEl = getEl("best-score");
   const gamesPlayedEl = getEl("games-played");
 
   if (bestScoreEl) bestScoreEl.textContent = String(currentStats.bestScore);
-  if (gamesPlayedEl)
-    gamesPlayedEl.textContent = String(currentStats.gamesPlayed);
+  if (gamesPlayedEl) gamesPlayedEl.textContent = String(currentStats.gamesPlayed);
 }
 
 function updatePauseButton() {
@@ -428,7 +442,6 @@ function handlePhysicsAndScoring() {
     ball.y = bottomPaddle.y - ball.r;
     ball.dx += (Math.random() - 0.5) * 2;
 
-    // Ściana: odbicia liczone jako wynik
     if (currentMode === MODE_WALL) {
       playerScore++;
       if (playerScore > stats[MODE_WALL].bestScore) {
@@ -637,13 +650,17 @@ function initGame() {
 
   setupKeyboard();
 
-  // Po załadowaniu progresu
+  // 1) Wczytaj progres
   loadProgress().then(() => {
+    // 2) Ustaw layout i obiekty
     resizeCanvas();
     setupPaddles();
     resetBall(true);
 
+    // 3) Sterowanie myszą/palcem
     setupGrabControls();
+
+    // 4) Guardy i UI
     setupBeforeUnloadGuard();
     setupClickGuard();
     setupControlButtons();
@@ -656,7 +673,7 @@ function initGame() {
       });
     }
 
-    // Startowy tryb – Ściana
+    // Startowy tryb – Ściana (UI opiera się już na wczytanych stats)
     setMode(MODE_WALL);
     updatePauseButton();
 
