@@ -1,1 +1,9 @@
+{
+  "id": "neon-minesweeper",
+  "name": "Neon Minesweeper",
+  "description": "Odkrywaj pola, unikaj min, bij rekord czasu i zapisuj stan rozgrywki.",
+  "icon": "💣",
+  "thumb": null,
+  "entry": "index.html"
+}
 
