@@ -13,6 +13,7 @@ let score = 0;
 let bestScore = 0;
 let totalGames = 0;
 let isGameOver = false;
+let isPaused = false;
 let speed;
 
 // Ustawienia planszy
@@ -27,6 +28,7 @@ let scoreEl;
 let bestScoreEl;
 let totalGamesEl;
 let newGameBtn;
+let pauseBtn;
 let saveGameBtn;
 let resetRecordBtn;
 
@@ -47,14 +49,24 @@ function initGame() {
   totalGamesEl = document.getElementById("total-games");
 
   newGameBtn = document.getElementById("new-game-btn");
+  pauseBtn = document.getElementById("pause-btn");
   saveGameBtn = document.getElementById("save-game-btn");
   resetRecordBtn = document.getElementById("reset-record-btn");
 
   attachEvents();
 
   loadProgress().then(function () {
-    updateHud();
-    startNewGame();
+    // Jeśli nie było zapisanego gameState, odpalamy nową grę
+    if (!LAST_SAVE_DATA || !LAST_SAVE_DATA.gameState) {
+      startNewGame();
+    } else {
+      // Był zapis – odtwórz stan dokładnie jak był, w pauzie
+      restoreGameState(LAST_SAVE_DATA.gameState);
+      isPaused = true;
+      updateHud();
+      draw();
+      updatePauseButtonLabel();
+    }
 
     setupBeforeUnloadGuard();
     setupClickGuard();
@@ -97,6 +109,17 @@ function buildSavePayload() {
   return {
     bestScore: bestScore,
     totalGames: totalGames,
+    gameState: {
+      snake: snake,
+      direction: direction,
+      nextDirection: nextDirection,
+      food: food,
+      score: score,
+      isGameOver: isGameOver,
+      speed: speed,
+      tilesX: tilesX,
+      tilesY: tilesY,
+    },
   };
 }
 
@@ -105,6 +128,9 @@ function saveCurrentSession() {
     console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.save");
     return Promise.resolve();
   }
+
+  // Zapis = pauza
+  setPauseState(true);
 
   const payload = buildSavePayload();
 
@@ -155,6 +181,14 @@ function attachEvents() {
     });
   }
 
+  if (pauseBtn) {
+    pauseBtn.addEventListener("click", function () {
+      if (isGameOver) return;
+
+      setPauseState(!isPaused);
+    });
+  }
+
   if (saveGameBtn) {
     saveGameBtn.addEventListener("click", function () {
       saveCurrentSession();
@@ -190,6 +224,17 @@ function handleKeyDown(e) {
     e.preventDefault();
   }
 
+  // Spacja po zakończeniu gry = nowa gra
+  if (key === " " && isGameOver) {
+    startNewGame();
+    return;
+  }
+
+  if (isPaused || isGameOver) {
+    // Nie zmieniamy kierunku, jeśli pauza lub koniec gry
+    return;
+  }
+
   // zmiana kierunku
   if (key === "ArrowUp" && direction.y !== 1) {
     nextDirection = { x: 0, y: -1 };
@@ -199,9 +244,6 @@ function handleKeyDown(e) {
     nextDirection = { x: -1, y: 0 };
   } else if (key === "ArrowRight" && direction.x !== -1) {
     nextDirection = { x: 1, y: 0 };
-  } else if (key === " " && isGameOver) {
-    // Spacja po zakończeniu gry = nowa gra
-    startNewGame();
   }
 }
 
@@ -211,18 +253,28 @@ function updateHud() {
   if (totalGamesEl) totalGamesEl.textContent = String(totalGames);
 }
 
+function updatePauseButtonLabel() {
+  if (!pauseBtn) return;
+  if (isGameOver) {
+    pauseBtn.textContent = "Pauza";
+    pauseBtn.disabled = true;
+    return;
+  }
+
+  pauseBtn.disabled = false;
+  pauseBtn.textContent = isPaused ? "Wznów" : "Pauza";
+}
+
 /* ======================
    GRA – LOGIKA
    ====================== */
 
 function startNewGame() {
-  // wyłącz poprzednią pętlę
   if (gameLoop) {
     clearInterval(gameLoop);
     gameLoop = null;
   }
 
-  // startowy wąż
   snake = [
     { x: 8, y: 10 },
     { x: 7, y: 10 },
@@ -235,27 +287,29 @@ function startNewGame() {
   score = 0;
   isGameOver = false;
   speed = initialSpeed;
+  isPaused = false;
 
   updateHud();
   placeFood();
   hasUnsavedChanges = false;
 
-  draw(); // narysuj stan początkowy
+  draw();
   startLoop();
+  updatePauseButtonLabel();
 }
 
 function startLoop() {
   if (gameLoop) clearInterval(gameLoop);
+  if (isPaused || isGameOver) return;
   gameLoop = setInterval(tick, speed);
 }
 
 function tick() {
-  if (isGameOver) return;
+  if (isPaused || isGameOver) return;
 
-  // Po pierwszym ruchu zakładamy, że użytkownik ma "niezapisany" stan
+  // mamy niezapisany stan od pierwszego ruchu
   hasUnsavedChanges = true;
 
-  // Zastosuj zbuforowany kierunek
   direction = nextDirection;
 
   // Nowa głowa
@@ -276,7 +330,6 @@ function tick() {
     return;
   }
 
-  // Dodaj nową głowę
   snake.unshift(head);
 
   // Jedzenie
@@ -287,13 +340,11 @@ function tick() {
     }
     updateHud();
 
-    // Przyśpieszenie
     speed = Math.max(minSpeed, speed - speedStep);
-    startLoop();
+    startLoop(); // restartujemy pętlę z nową prędkością
 
     placeFood();
   } else {
-    // Usuń ogon
     snake.pop();
   }
 
@@ -314,6 +365,31 @@ function placeFood() {
   food = newFood;
 }
 
+function restoreGameState(state) {
+  // prosta rekonstrukcja
+  snake = state.snake || [
+    { x: 8, y: 10 },
+    { x: 7, y: 10 },
+    { x: 6, y: 10 },
+  ];
+  direction = state.direction || { x: 1, y: 0 };
+  nextDirection = state.nextDirection || { x: 1, y: 0 };
+  food = state.food || { x: 5, y: 5 };
+  score = typeof state.score === "number" ? state.score : 0;
+  isGameOver = !!state.isGameOver;
+  speed = typeof state.speed === "number" ? state.speed : initialSpeed;
+
+  // bezpieczeństwo – tilesX/Y raczej się nie zmieniają, ale jakby co:
+  if (typeof state.tilesX === "number") tilesX = state.tilesX;
+  if (typeof state.tilesY === "number") tilesY = state.tilesY;
+
+  if (gameLoop) {
+    clearInterval(gameLoop);
+    gameLoop = null;
+  }
+  updatePauseButtonLabel();
+}
+
 /* ======================
    RYSOWANIE
    ====================== */
@@ -325,7 +401,6 @@ function drawBackground() {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Delikatna siatka
   ctx.strokeStyle = "rgba(148, 163, 184, 0.08)";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -345,19 +420,16 @@ function drawFood() {
   const cy = food.y * tileSize + tileSize / 2;
   const r = tileSize * 0.35;
 
-  // Czerwone „jabłko”
   ctx.beginPath();
   ctx.fillStyle = "#f97373";
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
 
-  // Mały błysk
   ctx.beginPath();
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.arc(cx - r * 0.4, cy - r * 0.4, r * 0.25, 0, Math.PI * 2);
   ctx.fill();
 
-  // Kontur
   ctx.beginPath();
   ctx.strokeStyle = "rgba(248, 113, 113, 0.9)";
   ctx.lineWidth = 1;
@@ -397,7 +469,6 @@ function drawSnake() {
     ctx.fill();
     ctx.stroke();
 
-    // oko
     if (i === 0) {
       const eyeOffsetX = direction.x === -1 ? -3 : direction.x === 1 ? 3 : 0;
       const eyeOffsetY = direction.y === -1 ? -3 : direction.y === 1 ? 3 : 0;
@@ -416,31 +487,16 @@ function draw() {
   drawBackground();
   drawFood();
   drawSnake();
+
+  if (isGameOver) {
+    drawGameOverOverlay();
+  }
 }
 
-/* ======================
-   KONIEC GRY
-   ====================== */
-
-function endGame() {
-  isGameOver = true;
-  if (gameLoop) {
-    clearInterval(gameLoop);
-    gameLoop = null;
-  }
-
-  totalGames++;
-  if (score > bestScore) {
-    bestScore = score;
-  }
-  updateHud();
-  hasUnsavedChanges = true;
-
-  // Przyciemnienie
+function drawGameOverOverlay() {
   ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // prostokąt pod napisem
   ctx.fillStyle = "rgba(0,0,0,0.6)";
   ctx.fillRect(40, canvas.height / 2 - 40, canvas.width - 80, 80);
 
@@ -455,6 +511,55 @@ function endGame() {
     canvas.width / 2,
     canvas.height / 2 + 22
   );
+}
+
+/* ======================
+   KONIEC GRY
+   ====================== */
+
+function endGame() {
+  isGameOver = true;
+  isPaused = false;
+
+  if (gameLoop) {
+    clearInterval(gameLoop);
+    gameLoop = null;
+  }
+
+  totalGames++;
+  if (score > bestScore) {
+    bestScore = score;
+  }
+
+  updateHud();
+  hasUnsavedChanges = true;
+  updatePauseButtonLabel();
+  draw(); // narysuje też overlay
+}
+
+/* ======================
+   PAUZA / WZNÓW
+   ====================== */
+
+function setPauseState(paused) {
+  if (isGameOver) {
+    isPaused = false;
+    updatePauseButtonLabel();
+    return;
+  }
+
+  isPaused = paused;
+
+  if (isPaused) {
+    if (gameLoop) {
+      clearInterval(gameLoop);
+      gameLoop = null;
+    }
+  } else {
+    startLoop();
+  }
+
+  updatePauseButtonLabel();
 }
 
 /* ======================
