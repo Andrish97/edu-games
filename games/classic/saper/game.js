@@ -1,5 +1,19 @@
 const GAME_ID = "neon-minesweeper";
 
+// rozmiar kafelka (stały)
+const tileSize = 28;
+
+// klasyczne rozmiary plansz
+const SIZES = {
+  small: { cols: 9, rows: 9 },
+  medium: { cols: 16, rows: 16 },
+  large: { cols: 30, rows: 16 }
+};
+
+// stała gęstość min (proporcjonalnie do wielkości planszy)
+const MINE_DENSITY = 0.16; // ok. 16% pól to miny
+
+// stan planszy
 let cols = 16;
 let rows = 16;
 let numMines = 0;
@@ -14,10 +28,11 @@ let revealedCount = 0;
 let timerInterval = null;
 let seconds = 0;
 
-// Statystyki zapisane w ArcadeProgress
-let bestTime = null; // najlepszy czas wygranej w sekundach
-let totalGames = 0; // liczba rozegranych gier
+// statystyki gry (zapisujemy tylko to)
+let bestTime = null; // najlepszy czas (w sekundach) dla wygranych
+let totalGames = 0;  // liczba rozegranych gier
 
+// progres / guardy
 let hasUnsavedChanges = false;
 let LAST_SAVE_DATA = null;
 
@@ -34,16 +49,6 @@ let newGameBtn;
 let saveGameBtn;
 let resetRecordBtn;
 
-const tileSize = 28;
-
-const SIZES = {
-  small: { cols: 9, rows: 9 },
-  medium: { cols: 16, rows: 16 },
-  large: { cols: 30, rows: 16 }
-};
-
-const MINE_DENSITY = 0.16; // ok. 16% pól
-
 const numberColors = {
   1: "#60a5fa",
   2: "#4ade80",
@@ -56,11 +61,12 @@ const numberColors = {
 };
 
 /* =======================
-   PROGRES / STATYSTYKI
+   PROGRES (tylko statystyki)
    ======================= */
 
 function updateStatsUI() {
   if (!bestTimeEl || !totalGamesEl) return;
+
   bestTimeEl.textContent =
     typeof bestTime === "number" ? bestTime.toString() : "–";
   totalGamesEl.textContent = totalGames.toString();
@@ -68,29 +74,15 @@ function updateStatsUI() {
 
 function buildSavePayload() {
   return {
-    stats: {
-      bestTime,
-      totalGames
-    },
-    lastState: {
-      sizeKey: sizeSelect.value,
-      cols,
-      rows,
-      numMines,
-      seconds,
-      flagsLeft,
-      revealedCount,
-      isGameOver,
-      isWin,
-      isFirstClick,
-      grid
-    }
+    bestTime,
+    totalGames
   };
 }
 
 function loadProgress() {
   if (!window.ArcadeProgress || !ArcadeProgress.load) {
     console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.load");
+    updateStatsUI();
     return Promise.resolve();
   }
 
@@ -103,25 +95,19 @@ function loadProgress() {
 
       LAST_SAVE_DATA = data;
 
-      if (data.stats) {
-        if (typeof data.stats.bestTime === "number") {
-          bestTime = data.stats.bestTime;
-        }
-        if (typeof data.stats.totalGames === "number") {
-          totalGames = data.stats.totalGames;
-        }
+      if (typeof data.bestTime === "number") {
+        bestTime = data.bestTime;
+      }
+      if (typeof data.totalGames === "number") {
+        totalGames = data.totalGames;
       }
 
       updateStatsUI();
-
-      if (data.lastState && data.lastState.grid) {
-        restoreGameState(data.lastState);
-      }
-
       hasUnsavedChanges = false;
     })
     .catch(function (err) {
       console.error("[GAME]", GAME_ID, "Błąd load:", err);
+      updateStatsUI();
     });
 }
 
@@ -137,12 +123,12 @@ function saveCurrentSession() {
     .then(function () {
       LAST_SAVE_DATA = payload;
       hasUnsavedChanges = false;
-      console.log("[GAME]", GAME_ID, "zapisano stan:", payload);
-      alert("Stan gry zapisany.");
+      console.log("[GAME]", GAME_ID, "statystyki zapisane:", payload);
+      alert("Statystyki zapisane.");
     })
     .catch(function (err) {
       console.error("[GAME]", GAME_ID, "Błąd save:", err);
-      alert("Nie udało się zapisać stanu gry.");
+      alert("Nie udało się zapisać statystyk.");
     });
 }
 
@@ -157,8 +143,8 @@ function clearProgress() {
       LAST_SAVE_DATA = null;
       bestTime = null;
       totalGames = 0;
-      updateStatsUI();
       hasUnsavedChanges = false;
+      updateStatsUI();
       console.log("[GAME]", GAME_ID, "progress wyczyszczony");
     })
     .catch(function (err) {
@@ -167,7 +153,7 @@ function clearProgress() {
 }
 
 /* =======================
-   LOGIKA GRY
+   LOGIKA PLANSZY
    ======================= */
 
 function applyBoardSizeFromSelect() {
@@ -233,6 +219,7 @@ function placeMines(excludeX, excludeY) {
     placed++;
   }
 
+  // policz liczby
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       if (grid[y][x].mine) {
@@ -247,6 +234,10 @@ function placeMines(excludeX, excludeY) {
     }
   }
 }
+
+/* =======================
+   TIMER
+   ======================= */
 
 function startTimer(startFrom = 0) {
   if (timerInterval) clearInterval(timerInterval);
@@ -264,6 +255,10 @@ function stopTimer() {
     timerInterval = null;
   }
 }
+
+/* =======================
+   RESET I PRZEBIEG GRY
+   ======================= */
 
 function resetGame() {
   stopTimer();
@@ -285,7 +280,6 @@ function revealCell(x, y) {
 
   cell.revealed = true;
   revealedCount++;
-  hasUnsavedChanges = true;
 
   if (cell.mine) {
     gameOver(false);
@@ -320,7 +314,6 @@ function toggleFlag(x, y) {
     flagsLeft--;
   }
   flagsLeftEl.textContent = flagsLeft;
-  hasUnsavedChanges = true;
 }
 
 function checkWin() {
@@ -336,7 +329,7 @@ function gameOver(win) {
   isWin = win;
   stopTimer();
 
-  // aktualizacja statystyk
+  // aktualizacja statystyk (i tylko to zapisujemy)
   totalGames++;
   if (win) {
     if (bestTime == null || seconds < bestTime) {
@@ -540,48 +533,6 @@ function drawOverlay() {
 }
 
 /* =======================
-   RESTORE Z ZAPISU
-   ======================= */
-
-function restoreGameState(state) {
-  try {
-    if (!state || !state.grid) return;
-
-    if (SIZES[state.sizeKey]) {
-      sizeSelect.value = state.sizeKey;
-    }
-
-    cols = state.cols;
-    rows = state.rows;
-    numMines = state.numMines;
-    seconds = state.seconds || 0;
-    flagsLeft = state.flagsLeft;
-    revealedCount = state.revealedCount || 0;
-    isGameOver = !!state.isGameOver;
-    isWin = !!state.isWin;
-    isFirstClick = !!state.isFirstClick;
-
-    grid = state.grid;
-
-    canvas.width = cols * tileSize;
-    canvas.height = rows * tileSize;
-
-    minesEl.textContent = numMines;
-    flagsLeftEl.textContent = flagsLeft;
-    timeEl.textContent = seconds;
-
-    if (!isGameOver && !isFirstClick) {
-      startTimer(seconds);
-    }
-
-    draw();
-  } catch (e) {
-    console.error("[GAME]", GAME_ID, "Błąd odtwarzania stanu:", e);
-    resetGame();
-  }
-}
-
-/* =======================
    EVENTY I GUARDY
    ======================= */
 
@@ -610,12 +561,14 @@ function setupCanvasEvents() {
     const { x, y } = cellPos;
     const cell = grid[y][x];
 
+    // PPM – flaga
     if (e.button === 2) {
       toggleFlag(x, y);
       draw();
       return;
     }
 
+    // LPM – odkryj
     if (e.button === 0) {
       if (cell.flagged) return;
 
@@ -637,11 +590,11 @@ function setupButtons() {
       const ok =
         !hasUnsavedChanges ||
         window.confirm(
-          "Rozpocząć nową grę? Aktualny postęp tej rozgrywki nie zostanie zapisany (chyba że użyjesz „Zapisz”)."
+          "Masz niezapisane statystyki (np. nowy rekord lub nową grę). Kontynuować bez zapisu?"
         );
       if (!ok) return;
       resetGame();
-      hasUnsavedChanges = true;
+      // sama nowa gra nie zmienia statystyk – nie ustawiamy hasUnsavedChanges
     });
   }
 
@@ -668,7 +621,6 @@ function setupButtons() {
 
   sizeSelect.addEventListener("change", () => {
     resetGame();
-    hasUnsavedChanges = true;
   });
 }
 
@@ -695,7 +647,7 @@ function setupClickGuard() {
 
     if (isReturnToArcade) {
       const ok = window.confirm(
-        "Masz niezapisany postęp. Wyjść bez zapisywania?"
+        "Masz niezapisane statystyki (np. nowy rekord). Wyjść bez zapisywania?"
       );
       if (!ok) {
         e.preventDefault();
@@ -724,9 +676,7 @@ function initGame() {
   resetRecordBtn = document.getElementById("reset-record-btn");
 
   sizeSelect.value = "medium";
-  applyBoardSizeFromSelect();
-  grid = createEmptyGrid();
-  draw();
+  resetGame();
   updateStatsUI();
 
   setupCanvasEvents();
@@ -734,9 +684,9 @@ function initGame() {
   setupBeforeUnloadGuard();
   setupClickGuard();
 
-  // wczytaj progres z ArcadeProgress
+  // wczytujemy tylko statystyki (rekord, liczba gier)
   loadProgress().finally(function () {
-    // Dodaj uniwersalny przycisk powrotu
+    // uniwersalny przycisk „Powrót do Arcade”
     if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
       ArcadeUI.addBackToArcadeButton({
         backUrl: "../../../arcade.html"
@@ -746,4 +696,3 @@ function initGame() {
 }
 
 document.addEventListener("DOMContentLoaded", initGame);
-
