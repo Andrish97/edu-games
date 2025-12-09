@@ -1,24 +1,27 @@
 // ===============================
-// Neon Wordl PL – game.js
+// Neon Wordl PL – gra bez zapisywanych słowników
 // ===============================
 
 "use strict";
 
-// URL do Twojej Edge Function wordgen (Supabase)
-const EDGE_URL = "https://zbcpqwugthvizqzkvurw.functions.supabase.co/wordgen";
-
-// Ile prób
-const MAX_ROWS = 6;
+// Publiczny słownik PL do Wordle (GitHub, JSON array)
+const WORDS_URL =
+  "https://raw.githubusercontent.com/alexadam/wordle-list/main/wordlist_pl.json";
 
 // Dozwolone długości słów
 const ALLOWED_LENGTHS = [4, 5, 6, 7];
+const MAX_ROWS = 6;
+
+// Słownik w pamięci
+let ALL_WORDS = null;
+let WORDS_BY_LEN = {};
+let WORD_SETS_BY_LEN = {};
 
 // DOM
 let boardEl;
 let statusEl;
 let lenSel;
 let newGameBtn;
-let resetDictBtn;
 let keyboardEl;
 
 // Stan gry
@@ -27,183 +30,95 @@ let row = 0;
 let col = 0;
 let wordLength = 5;
 let secret = "";
+let gameOver = false;
 
-// Układ klawiatury – bez Q, V, X
+// Układ klawiatury (bez Q, V, X)
 const KEYBOARD = [
-  "A","Ą","B","C","Ć","D","E","Ę","F","G",
-  "H","I","J","K","L","Ł","M","N","Ń","O",
-  "Ó","P","R","S","Ś","T","U","W","Y","Z",
-  "Ż","Ź"
+  "A", "Ą", "B", "C", "Ć", "D", "E", "Ę", "F", "G",
+  "H", "I", "J", "K", "L", "Ł", "M", "N", "Ń", "O",
+  "Ó", "P", "R", "S", "Ś", "T", "U", "W", "Y", "Z",
+  "Ż", "Ź"
 ];
 
 // ===============================
-//   POMOCNICZE – SŁOWNIKI GOŚCIA
+//   SŁOWNIK Z INTERNETU
 // ===============================
 
-function loadGuestDict(len) {
-  const key = "guest_dict_" + len;
-  const raw = localStorage.getItem(key);
-  if (!raw) return [];
+async function loadInternetDictionary() {
+  if (ALL_WORDS) return ALL_WORDS;
 
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-  } catch (e) {
-    console.warn("[NeonWordl] Nieprawidłowy słownik gościa, resetuję:", e);
-  }
-
-  // jeśli dotarliśmy tutaj – w storage był syf
-  localStorage.removeItem(key);
-  return [];
-}
-
-function saveGuestDict(len, words) {
-  const key = "guest_dict_" + len;
-  localStorage.setItem(key, JSON.stringify(words));
-}
-
-// ===============================
-//   POBIERANIE SŁÓW Z EDGE FUNCTION
-// ===============================
-
-async function generateWordsFromAI(len) {
-  const resp = await fetch(EDGE_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ len })
-  });
+  statusEl.textContent = "Pobieram słownik z internetu...";
+  const resp = await fetch(WORDS_URL);
 
   if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    console.error("[NeonWordl] Błąd wordgen:", resp.status, text);
-    throw new Error("Wordgen zwrócił błąd " + resp.status);
+    throw new Error("Nie udało się pobrać słownika: " + resp.status);
   }
 
-  let data;
-  try {
-    data = await resp.json();
-  } catch (e) {
-    console.error("[NeonWordl] Niepoprawny JSON z wordgen:", e);
-    throw new Error("Nie udało się odczytać JSON z wordgen");
+  const data = await resp.json();
+  if (!Array.isArray(data)) {
+    throw new Error("Niepoprawny format słownika (nie jest tablicą).");
   }
 
-  if (!data || !Array.isArray(data.words) || !data.words.length) {
-    console.error("[NeonWordl] Niepoprawna struktura odpowiedzi z wordgen:", data);
-    throw new Error("Wordgen zwrócił złą strukturę");
-  }
-
-  return data.words;
+  ALL_WORDS = data;
+  prepareWordsByLength();
+  return ALL_WORDS;
 }
 
-// ===============================
-//   SŁOWNIK – GOŚĆ (localStorage)
-// ===============================
+function normalizeWord(w) {
+  return (w || "")
+    .toLowerCase()
+    .replace(/[^a-ząćęłńóśżź]/g, "");
+}
 
-async function getGuestSecret(len) {
-  let words = loadGuestDict(len);
+function prepareWordsByLength() {
+  WORDS_BY_LEN = {};
+  WORD_SETS_BY_LEN = {};
+  ALLOWED_LENGTHS.forEach((len) => {
+    WORDS_BY_LEN[len] = [];
+    WORD_SETS_BY_LEN[len] = new Set();
+  });
 
-  if (!words.length) {
-    words = await generateWordsFromAI(len);
-    if (!Array.isArray(words) || !words.length) {
-      throw new Error("Brak poprawnych słów z AI dla gościa");
-    }
-    saveGuestDict(len, words);
+  for (const raw of ALL_WORDS) {
+    const w = normalizeWord(raw);
+    const l = w.length;
+    if (!ALLOWED_LENGTHS.includes(l)) continue;
+    // Bez liter q, v, x – rzadko używane w Wordle PL
+    if (/[qvx]/.test(w)) continue;
+
+    WORDS_BY_LEN[l].push(w);
+    WORD_SETS_BY_LEN[l].add(w);
   }
 
-  const secret = words.shift();
-  saveGuestDict(len, words);
-  return secret;
-}
-
-function resetGuestDict(len) {
-  const key = "guest_dict_" + len;
-  localStorage.removeItem(key);
-}
-
-// ===============================
-//   SŁOWNIK – UŻYTKOWNIK (Supabase)
-// ===============================
-
-async function loadUserDict(user_id, len) {
-  if (!window.supabaseClient) return null;
-
-  const { data, error } = await supabaseClient
-    .from("user_dicts")
-    .select("words")
-    .eq("user_id", user_id)
-    .eq("len", len)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[NeonWordl] loadUserDict error:", error);
-    return null;
-  }
-
-  return (data && Array.isArray(data.words)) ? data.words : null;
-}
-
-async function saveUserDict(user_id, len, words) {
-  if (!window.supabaseClient) return;
-
-  const { error } = await supabaseClient
-    .from("user_dicts")
-    .upsert({
-      user_id,
-      len,
-      words,
-      updated_at: new Date().toISOString(),
-    });
-
-  if (error) {
-    console.error("[NeonWordl] saveUserDict error:", error);
+  // Na wszelki wypadek tasujemy trochę słownik,
+  // żeby kolejne sekrety były bardziej losowe.
+  for (const len of ALLOWED_LENGTHS) {
+    shuffleArray(WORDS_BY_LEN[len]);
   }
 }
 
-async function clearUserDict(user_id, len) {
-  if (!window.supabaseClient) return;
-
-  const { error } = await supabaseClient
-    .from("user_dicts")
-    .delete()
-    .eq("user_id", user_id)
-    .eq("len", len);
-
-  if (error) {
-    console.error("[NeonWordl] clearUserDict error:", error);
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 }
 
 async function getSecretWord(len) {
-  // próba zalogowanego usera
-  if (!window.ArcadeAuth || !ArcadeAuth.getUser) {
-    // brak auth – traktujemy jak gościa
-    return getGuestSecret(len);
+  await loadInternetDictionary();
+
+  const list = WORDS_BY_LEN[len] || [];
+  if (!list.length) {
+    throw new Error("Brak słów o długości " + len);
   }
 
-  const user = await ArcadeAuth.getUser();
-  if (!user || !user.id) {
-    // gość
-    return getGuestSecret(len);
-  }
+  const idx = (Math.random() * list.length) | 0;
+  return list[idx];
+}
 
-  let words = await loadUserDict(user.id, len);
-
-  if (!words || !words.length) {
-    words = await generateWordsFromAI(len);
-  }
-
-  const secret = words.shift();
-
-  if (!words.length) {
-    const refill = await generateWordsFromAI(len);
-    await saveUserDict(user.id, len, refill);
-  } else {
-    await saveUserDict(user.id, len, words);
-  }
-
-  return secret;
+function isValidWord(len, word) {
+  const set = WORD_SETS_BY_LEN[len];
+  if (!set) return false;
+  return set.has(word);
 }
 
 // ===============================
@@ -239,7 +154,6 @@ function markKey(letter, state) {
   const keyEl = keyboardEl.querySelector(`.word-key:nth-child(${idx + 1})`);
   if (!keyEl) return;
 
-  // priorytet: correct > present > absent
   if (state === "correct") {
     keyEl.classList.remove("present", "absent");
     keyEl.classList.add("correct");
@@ -272,13 +186,16 @@ function updateKeyboardColors(guessArr, secretWord) {
 }
 
 // ===============================
-//   BOARD / LOGIKA LITER
+//   BOARD / LOGIKA WPROWADZANIA
 // ===============================
 
 function initBoard() {
   boardEl.innerHTML = "";
   boardEl.style.gridTemplateColumns = `repeat(${wordLength}, 50px)`;
   board = [];
+  row = 0;
+  col = 0;
+  gameOver = false;
 
   for (let r = 0; r < MAX_ROWS; r++) {
     const rowArr = [];
@@ -290,14 +207,13 @@ function initBoard() {
     }
     board.push(rowArr);
   }
-
-  row = 0;
-  col = 0;
 }
 
 function pressLetter(ch) {
+  if (gameOver) return;
   if (row >= MAX_ROWS) return;
   if (col >= wordLength) return;
+
   const tile = board[row][col];
   tile.textContent = ch.toUpperCase();
   tile.classList.add("filled");
@@ -305,7 +221,9 @@ function pressLetter(ch) {
 }
 
 function erase() {
+  if (gameOver) return;
   if (col <= 0) return;
+
   col--;
   const tile = board[row][col];
   tile.textContent = "";
@@ -318,10 +236,8 @@ function colorRow(r) {
     guessArr[c] = board[r][c].textContent.toLowerCase();
   }
 
-  // kolory klawiatury
   updateKeyboardColors(guessArr, secret);
 
-  // kolory pól
   for (let c = 0; c < wordLength; c++) {
     const tile = board[r][c];
     const ch = guessArr[c];
@@ -336,8 +252,9 @@ function colorRow(r) {
 }
 
 async function submitRow() {
+  if (gameOver) return;
   if (row >= MAX_ROWS) return;
-  if (col < wordLength) return; // niedopisane słowo
+  if (col < wordLength) return; // niepełne słowo
 
   let guess = "";
   const guessArr = [];
@@ -347,11 +264,17 @@ async function submitRow() {
     guessArr.push(ch);
   }
 
+  // Sprawdź, czy słowo istnieje w słowniku
+  if (!isValidWord(wordLength, guess)) {
+    statusEl.textContent = "Nie znam takiego słowa w słowniku.";
+    return;
+  }
+
   colorRow(row);
 
   if (guess === secret) {
     statusEl.textContent = "Brawo! Zgadłeś słowo.";
-    row = MAX_ROWS;
+    gameOver = true;
     return;
   }
 
@@ -360,22 +283,25 @@ async function submitRow() {
 
   if (row >= MAX_ROWS) {
     statusEl.textContent = "Koniec prób. Słowo: " + secret.toUpperCase();
+    gameOver = true;
+  } else {
+    statusEl.textContent = "";
   }
 }
 
 // ===============================
-//   NOWA GRA / RESET SŁOWNIKA
+//   NOWA GRA
 // ===============================
 
 async function newGame() {
   try {
     newGameBtn.disabled = true;
-    resetDictBtn.disabled = true;
     statusEl.textContent = "Losuję słowo...";
 
     wordLength = parseInt(lenSel.value, 10);
     if (!ALLOWED_LENGTHS.includes(wordLength)) {
       wordLength = 5;
+      lenSel.value = "5";
     }
 
     secret = await getSecretWord(wordLength);
@@ -387,43 +313,15 @@ async function newGame() {
     statusEl.textContent = "Zgadnij słowo!";
   } catch (e) {
     console.error("[NeonWordl] newGame error:", e);
-    statusEl.textContent = "Błąd ładowania słownika. Spróbuj ponownie później.";
+    statusEl.textContent =
+      "Błąd ładowania słów z internetu. Spróbuj odświeżyć stronę później.";
   } finally {
     newGameBtn.disabled = false;
-    resetDictBtn.disabled = false;
-  }
-}
-
-async function resetDictionaryForCurrentLength() {
-  try {
-    resetDictBtn.disabled = true;
-    statusEl.textContent = "Czyszczę słownik...";
-
-    const len = parseInt(lenSel.value, 10) || 5;
-
-    let user = null;
-    if (window.ArcadeAuth && ArcadeAuth.getUser) {
-      user = await ArcadeAuth.getUser();
-    }
-
-    if (user && user.id) {
-      await clearUserDict(user.id, len);
-    } else {
-      resetGuestDict(len);
-    }
-
-    statusEl.textContent = "Słownik wyczyszczony. Losuję nowe słowo...";
-    await newGame();
-  } catch (e) {
-    console.error("[NeonWordl] resetDictionary error:", e);
-    statusEl.textContent = "Błąd czyszczenia słownika.";
-  } finally {
-    resetDictBtn.disabled = false;
   }
 }
 
 // ===============================
-//   INICJALIZACJA
+//   INICJALIZACJA GRY
 // ===============================
 
 function initGame() {
@@ -431,14 +329,14 @@ function initGame() {
   statusEl = document.getElementById("status");
   lenSel = document.getElementById("word-len");
   newGameBtn = document.getElementById("new-game-btn");
-  resetDictBtn = document.getElementById("reset-dict-btn");
   keyboardEl = document.getElementById("keyboard");
 
-  if (!boardEl || !statusEl || !lenSel || !newGameBtn || !resetDictBtn || !keyboardEl) {
+  if (!boardEl || !statusEl || !lenSel || !newGameBtn || !keyboardEl) {
     console.error("[NeonWordl] Brak wymaganych elementów DOM.");
     return;
   }
 
+  // Klawiatura fizyczna
   document.addEventListener("keydown", function (e) {
     if (e.key === "Enter") {
       submitRow();
@@ -454,26 +352,23 @@ function initGame() {
     }
   });
 
+  // Przyciski
   newGameBtn.addEventListener("click", function () {
     newGame();
   });
 
-  resetDictBtn.addEventListener("click", function () {
-    resetDictionaryForCurrentLength();
-  });
-
   lenSel.addEventListener("change", function () {
-    // zmiana długości słowa = nowa gra
     newGame();
   });
 
+  // Przyciski powrotu
   if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
     ArcadeUI.addBackToArcadeButton({
       backUrl: "../../../arcade.html",
     });
   }
 
-  // start pierwszej gry
+  // Start
   newGame();
 }
 
