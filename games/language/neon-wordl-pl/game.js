@@ -15,14 +15,11 @@ let board = []; // 2D: [row][col] -> tile element
 let row = 0;
 let col = 0;
 
-// Statystyki (z ArcadeProgress)
+// Statystyki (ArcadeProgress)
 let gamesPlayed = 0;
 let wins = 0;
 let currentStreak = 0;
 let maxStreak = 0;
-
-// Zapis / guardy
-let hasUnsavedChanges = false;
 let LAST_SAVE_DATA = null;
 
 // Klawiatura
@@ -35,7 +32,6 @@ let statusEl;
 let boardEl;
 let wordLenSel;
 let newGameBtn;
-let saveGameBtn;
 let resetRecordBtn;
 let statGamesEl;
 let statWinsEl;
@@ -116,15 +112,15 @@ function resetBoard() {
 }
 
 // ===== KLAWIATURA DOTYKOWA =====
-// Bez Q, V, X. Backspace wyżej, Enter niżej po prawej.
+// Twój układ: bez Q/V/X, backspace w 3 rzędzie, enter na końcu.
 const KEYBOARD_LAYOUT = [
   // rząd 1 – główne spółgłoski
   ["w", "e", "r", "t", "y", "u", "i", "o", "p"],
   // rząd 2
   ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-  // rząd 3 – część łacińska + Backspace (po prawej)
+  // rząd 3 – z ogonkami i Backspace po prawej
   ["z", "ź", "ż", "c", "b", "n", "m", "backspace"],
-  // rząd 4 – polskie ogonki + Enter na końcu
+  // rząd 4 – ogonki + Enter na końcu
   ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "enter"],
 ];
 
@@ -137,6 +133,7 @@ function buildKeyboard() {
   KEYBOARD_LAYOUT.forEach((rowKeys) => {
     const rowDiv = document.createElement("div");
     rowDiv.className = "keyboard-row";
+    rowDiv.style.setProperty("--keys", rowKeys.length);
 
     rowKeys.forEach((key) => {
       const btn = document.createElement("button");
@@ -178,13 +175,33 @@ function handleVirtualKey(k) {
   pressLetter(k);
 }
 
-// ===== LOGIKA STATYSTYK =====
+// ===== STATYSTYKI + AUTO-SAVE =====
 
 function updateStatsUI() {
   if (statGamesEl) statGamesEl.textContent = gamesPlayed.toString();
   if (statWinsEl) statWinsEl.textContent = wins.toString();
   if (statStreakEl) statStreakEl.textContent = currentStreak.toString();
   if (statMaxStreakEl) statMaxStreakEl.textContent = maxStreak.toString();
+}
+
+function autoSave() {
+  if (!window.ArcadeProgress || !ArcadeProgress.save) return;
+
+  const payload = {
+    gamesPlayed,
+    wins,
+    currentStreak,
+    maxStreak,
+  };
+
+  ArcadeProgress.save(GAME_ID, payload)
+    .then(() => {
+      LAST_SAVE_DATA = payload;
+      console.log("[WORDL] auto-zapis:", payload);
+    })
+    .catch((err) => {
+      console.error("[WORDL] błąd zapisu:", err);
+    });
 }
 
 function registerGameFinished(win) {
@@ -198,21 +215,24 @@ function registerGameFinished(win) {
   } else {
     currentStreak = 0;
   }
-  hasUnsavedChanges = true;
   updateStatsUI();
+  autoSave();
 }
 
-// ===== ArcadeProgress – load/save/clear =====
+// ===== ArcadeProgress – load / clear =====
 
 function loadProgress() {
   if (!window.ArcadeProgress || !ArcadeProgress.load) {
-    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.load");
+    console.warn("[WORDL]", GAME_ID, "Brak ArcadeProgress.load");
     return Promise.resolve();
   }
 
   return ArcadeProgress.load(GAME_ID)
     .then(function (data) {
-      if (!data) return;
+      if (!data) {
+        updateStatsUI();
+        return;
+      }
 
       if (typeof data.gamesPlayed === "number") gamesPlayed = data.gamesPlayed;
       if (typeof data.wins === "number") wins = data.wins;
@@ -221,54 +241,22 @@ function loadProgress() {
       if (typeof data.maxStreak === "number") maxStreak = data.maxStreak;
 
       LAST_SAVE_DATA = data;
-      hasUnsavedChanges = false;
       updateStatsUI();
     })
     .catch(function (err) {
-      console.error("[GAME]", GAME_ID, "Błąd load:", err);
-    });
-}
-
-function buildSavePayload() {
-  return {
-    gamesPlayed,
-    wins,
-    currentStreak,
-    maxStreak,
-  };
-}
-
-function saveCurrentSession() {
-  if (!window.ArcadeProgress || !ArcadeProgress.save) {
-    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.save");
-    return Promise.resolve();
-  }
-
-  const payload = buildSavePayload();
-
-  return ArcadeProgress.save(GAME_ID, payload)
-    .then(function () {
-      LAST_SAVE_DATA = payload;
-      hasUnsavedChanges = false;
-      console.log("[GAME]", GAME_ID, "zapisano:", payload);
-      statusEl.textContent = "Zapisano postęp gry.";
-    })
-    .catch(function (err) {
-      console.error("[GAME]", GAME_ID, "Błąd save:", err);
-      statusEl.textContent = "Błąd zapisu postępu.";
+      console.error("[WORDL]", GAME_ID, "Błąd load:", err);
     });
 }
 
 function clearProgress() {
   if (!window.ArcadeProgress || !ArcadeProgress.clear) {
-    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.clear");
+    console.warn("[WORDL]", GAME_ID, "Brak ArcadeProgress.clear");
     return Promise.resolve();
   }
 
   return ArcadeProgress.clear(GAME_ID)
     .then(function () {
       LAST_SAVE_DATA = null;
-      hasUnsavedChanges = false;
 
       gamesPlayed = 0;
       wins = 0;
@@ -276,48 +264,13 @@ function clearProgress() {
       maxStreak = 0;
       updateStatsUI();
 
-      console.log("[GAME]", GAME_ID, "progress wyczyszczony");
+      console.log("[WORDL]", GAME_ID, "progress wyczyszczony");
       statusEl.textContent = "Rekordy wyczyszczone.";
     })
     .catch(function (err) {
-      console.error("[GAME]", GAME_ID, "Błąd clear:", err);
+      console.error("[WORDL]", GAME_ID, "Błąd clear:", err);
       statusEl.textContent = "Błąd czyszczenia rekordów.";
     });
-}
-
-// ===== GUARD NA NIEZAPISANE ZMIANY =====
-
-function setupBeforeUnloadGuard() {
-  window.addEventListener("beforeunload", function (e) {
-    if (!hasUnsavedChanges) return;
-    e.preventDefault();
-    e.returnValue = "";
-    return "";
-  });
-}
-
-function setupClickGuard() {
-  document.addEventListener("click", function (e) {
-    if (!hasUnsavedChanges) return;
-
-    const target = e.target.closest("a,button");
-    if (!target) return;
-
-    const href = target.getAttribute("href");
-    const isReturnToArcade =
-      (href && href.indexOf("arcade.html") !== -1) ||
-      target.classList.contains("arcade-back-btn");
-
-    if (isReturnToArcade) {
-      const ok = window.confirm(
-        "Masz niezapisany postęp (statystyki). Wyjść bez zapisywania?"
-      );
-      if (!ok) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }
-  });
 }
 
 // ===== OBSŁUGA PRZYCISKÓW =====
@@ -333,12 +286,6 @@ function attachButtonEvents() {
         );
       if (!ok) return;
       startNewGame();
-    });
-  }
-
-  if (saveGameBtn) {
-    saveGameBtn.addEventListener("click", function () {
-      saveCurrentSession();
     });
   }
 
@@ -410,6 +357,7 @@ function updateKeyColor(letter, newState) {
   });
 }
 
+// pełna logika Wordle dla duplikatów
 function colorRow(r) {
   const guess = [];
   for (let c = 0; c < wordLength; c++) {
@@ -418,14 +366,14 @@ function colorRow(r) {
 
   const secretArr = secret.split("");
 
-  // Mapa: litera -> ile razy występuje w tajnym słowie
+  // LICZNIK LITER w sekrecie
   const counts = {};
   for (let i = 0; i < wordLength; i++) {
     const ch = secretArr[i];
     counts[ch] = (counts[ch] || 0) + 1;
   }
 
-  // 1. Zielone (dokładne trafienia) – zmniejszamy licznik tej litery
+  // KROK 1 — zielone
   for (let c = 0; c < wordLength; c++) {
     const tile = board[r][c];
     const ch = guess[c];
@@ -437,7 +385,7 @@ function colorRow(r) {
     }
   }
 
-  // 2. Żółte / szare – używamy pozostałych liczników
+  // KROK 2 — żółte / szare
   for (let c = 0; c < wordLength; c++) {
     const tile = board[r][c];
     if (tile.classList.contains("correct")) continue;
@@ -540,7 +488,6 @@ function cacheDom() {
   keyboardEl = document.getElementById("keyboard");
 
   newGameBtn = document.getElementById("new-game-btn");
-  saveGameBtn = document.getElementById("save-game-btn");
   resetRecordBtn = document.getElementById("reset-record-btn");
 
   statGamesEl = document.getElementById("stat-games");
@@ -553,8 +500,6 @@ function initGame() {
   cacheDom();
   updateStatsUI();
 
-  setupBeforeUnloadGuard();
-  setupClickGuard();
   setupKeyboardListener();
   attachButtonEvents();
 
@@ -564,7 +509,7 @@ function initGame() {
     });
   }
 
-  // Ładujemy progres i słownik równolegle
+  // Ładujemy progres i słownik równolegle, potem start gry
   Promise.all([loadProgress(), loadDictionary()]).then(() => {
     wordLength = parseInt(wordLenSel.value, 10) || 5;
     startNewGame();
