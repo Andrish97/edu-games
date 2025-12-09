@@ -1,290 +1,363 @@
-// ===============================
-// Neon Wordl – game.js
-// ===============================
-
-"use strict";
-
-// Publiczny słownik PL (JSON array)
-const WORDS_URL =
-  "https://raw.githubusercontent.com/harrix/datasets/master/datasets/wordlist/wordlist-polish.json";
-
-// Konfiguracja gry
-const ALLOWED_LENGTHS = [4, 5, 6, 7];
+// ===== KONFIGURACJA GRY =====
+const GAME_ID = "neon-wordl-pl";
+const DICT_URL =
+  "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/pl/pl_full.txt";
 const MAX_ROWS = 6;
 
-// Słownik w pamięci (tylko RAM)
-let ALL_WORDS = null;
-let WORDS_BY_LEN = {};
-let WORD_SETS_BY_LEN = {};
+let allWords = [];
+let validWords = [];
+let usedWords = new Set();
+let secret = "";
+let wordLength = 5;
 
-// DOM
-let boardEl;
-let statusEl; // będziemy używać pod komunikaty – jak nie ma, to użyjemy podtytułu
-let lenSel; // jeśli dodasz wybór długości – na razie nie używamy
-let newGameBtn;
-let resetStatsBtn;
-let keyboardEl;
-let winsEl;
-let totalEl;
-
-// Stan gry
-let board = [];
+// Stan planszy
+let board = []; // 2D: [row][col] -> tile element
 let row = 0;
 let col = 0;
-let wordLength = 5; // domyślnie 5-literowe
-let secret = "";
-let gameOver = false;
 
-// Statystyki (localStorage)
-const STATS_KEY = "neon_wordl_stats";
-let stats = {
-  wins: 0,
-  total: 0,
-};
+// Statystyki (z ArcadeProgress)
+let gamesPlayed = 0;
+let wins = 0;
+let currentStreak = 0;
+let maxStreak = 0;
 
-// Klawiatura ekranowa (3 rzędy, z Enter i Backspace)
-const KEY_ROWS = [
-  ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-  ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-  ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "BACK"],
-];
+// Zapis / guardy
+let hasUnsavedChanges = false;
+let LAST_SAVE_DATA = null;
 
-// ===============================
-//  POMOCNICZE – STATYSTYKI
-// ===============================
+// Klawiatura
+let keyboardEl;
+const keyboardState = {}; // litera -> "absent" | "present" | "correct"
 
-function loadStats() {
-  try {
-    const raw = localStorage.getItem(STATS_KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (typeof data.wins === "number") stats.wins = data.wins;
-    if (typeof data.total === "number") stats.total = data.total;
-  } catch (e) {
-    console.warn("[NeonWordl] Nie udało się wczytać statystyk:", e);
-  }
-}
+// DOM
+let statusEl;
+let boardEl;
+let wordLenSel;
+let newGameBtn;
+let saveGameBtn;
+let resetRecordBtn;
+let statGamesEl;
+let statWinsEl;
+let statStreakEl;
+let statMaxStreakEl;
 
-function saveStats() {
-  try {
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
-  } catch (e) {
-    console.warn("[NeonWordl] Nie udało się zapisać statystyk:", e);
-  }
-}
-
-function updateStatsUI() {
-  if (winsEl) winsEl.textContent = String(stats.wins);
-  if (totalEl) totalEl.textContent = String(stats.total);
-}
-
-function registerGameResult(didWin) {
-  stats.total += 1;
-  if (didWin) stats.wins += 1;
-  saveStats();
-  updateStatsUI();
-}
-
-// ===============================
-//  SŁOWNIK Z INTERNETU
-// ===============================
-
-async function loadInternetDictionary() {
-  if (ALL_WORDS) return ALL_WORDS;
-
-  setStatus("Pobieram słownik z internetu...");
-
-  const resp = await fetch(WORDS_URL);
-  if (!resp.ok) {
-    throw new Error("Nie udało się pobrać słownika: " + resp.status);
-  }
-  const data = await resp.json();
-  if (!Array.isArray(data)) {
-    throw new Error("Niepoprawny format słownika (nie jest tablicą).");
-  }
-
-  ALL_WORDS = data;
-  prepareWordsByLength();
-  return ALL_WORDS;
-}
+// ===== POMOCNICZE =====
 
 function normalizeWord(w) {
-  return (w || "")
+  return w
     .toLowerCase()
-    .replace(/[^a-ząćęłńóśżź]/g, "");
+    .replace(/[^a-ząćęłńóśżź]/g, ""); // tylko litery PL
 }
 
-function prepareWordsByLength() {
-  WORDS_BY_LEN = {};
-  WORD_SETS_BY_LEN = {};
+// ===== SŁOWNIK =====
 
-  ALLOWED_LENGTHS.forEach((len) => {
-    WORDS_BY_LEN[len] = [];
-    WORD_SETS_BY_LEN[len] = new Set();
-  });
-
-  for (const raw of ALL_WORDS) {
-    const w = normalizeWord(raw);
-    const l = w.length;
-    if (!ALLOWED_LENGTHS.includes(l)) continue;
-    // unikamy q, v, x (rzadko używane w takie gry)
-    if (/[qvx]/.test(w)) continue;
-
-    WORDS_BY_LEN[l].push(w);
-    WORD_SETS_BY_LEN[l].add(w);
-  }
-
-  // lekkie przetasowanie, by były bardziej losowe
-  for (const len of ALLOWED_LENGTHS) {
-    shuffleArray(WORDS_BY_LEN[len]);
+async function loadDictionary() {
+  statusEl.textContent = "Pobieram słownik...";
+  try {
+    const resp = await fetch(DICT_URL);
+    const text = await resp.text();
+    const lines = text.split("\n").map((x) => normalizeWord(x.split(" ")[0]));
+    allWords = [...new Set(lines)].filter(
+      (w) => w.length >= 4 && w.length <= 7
+    );
+    statusEl.textContent = "Słownik gotowy. Zgaduj!";
+  } catch (err) {
+    console.error("[WORDL] Błąd przy pobieraniu słownika:", err);
+    statusEl.textContent =
+      "Błąd ładowania słownika. Sprawdź połączenie z internetem.";
   }
 }
 
-function shuffleArray(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = (Math.random() * (i + 1)) | 0;
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
+function chooseSecret() {
+  validWords = allWords.filter((w) => w.length === wordLength);
+  if (!validWords.length) return "";
+
+  let w;
+  let safety = 0;
+  do {
+    w = validWords[Math.floor(Math.random() * validWords.length)];
+    safety++;
+  } while (usedWords.has(w) && safety < 1000);
+
+  usedWords.add(w);
+  return w;
 }
 
-async function getSecretWord(len) {
-  await loadInternetDictionary();
-  const list = WORDS_BY_LEN[len] || [];
-  if (!list.length) {
-    throw new Error("Brak słów o długości " + len);
-  }
-  const idx = (Math.random() * list.length) | 0;
-  return list[idx];
-}
+// ===== PLANSZA =====
 
-function isValidWord(len, word) {
-  const set = WORD_SETS_BY_LEN[len];
-  if (!set) return false;
-  return set.has(word);
-}
-
-// ===============================
-//  STATUS / KOMUNIKATY
-// ===============================
-
-function setStatus(msg) {
-  if (statusEl) {
-    statusEl.textContent = msg || "";
-  } else {
-    // jeśli nie ma dedykowanego elementu, można użyć console lub podtytułu
-    console.log("[NeonWordl]", msg);
-  }
-}
-
-// ===============================
-//  KLAWIATURA EKRANOWA
-// ===============================
-
-function initKeyboard() {
-  keyboardEl.innerHTML = "";
-
-  KEY_ROWS.forEach((rowLetters) => {
-    const rowDiv = document.createElement("div");
-    rowDiv.className = "key-row";
-
-    rowLetters.forEach((code) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "key";
-
-      if (code === "ENTER") {
-        btn.textContent = "Enter";
-        btn.dataset.keycode = "ENTER";
-      } else if (code === "BACK") {
-        btn.textContent = "⌫";
-        btn.dataset.keycode = "BACKSPACE";
-      } else {
-        btn.textContent = code;
-        btn.dataset.keycode = code;
-      }
-
-      btn.addEventListener("click", () => handleVirtualKey(btn.dataset.keycode));
-      rowDiv.appendChild(btn);
-    });
-
-    keyboardEl.appendChild(rowDiv);
-  });
-}
-
-function resetKeyboardColors() {
-  const keys = keyboardEl.querySelectorAll(".key");
-  keys.forEach((k) => {
-    k.classList.remove("correct", "present", "absent");
-  });
-}
-
-function markKey(letter, state) {
-  // letter: 'a', 'b', etc.
-  const upper = letter.toUpperCase();
-  const btn = keyboardEl.querySelector(`.key[data-keycode="${upper}"]`);
-  if (!btn) return;
-
-  if (state === "correct") {
-    btn.classList.remove("present", "absent");
-    btn.classList.add("correct");
-  } else if (state === "present") {
-    if (!btn.classList.contains("correct")) {
-      btn.classList.remove("absent");
-      btn.classList.add("present");
-    }
-  } else if (state === "absent") {
-    if (
-      !btn.classList.contains("correct") &&
-      !btn.classList.contains("present")
-    ) {
-      btn.classList.add("absent");
-    }
-  }
-}
-
-function updateKeyboardColors(guessArr, secretWord) {
-  for (let i = 0; i < guessArr.length; i++) {
-    const ch = guessArr[i];
-    if (!ch) continue;
-    if (secretWord[i] === ch) {
-      markKey(ch, "correct");
-    } else if (secretWord.includes(ch)) {
-      markKey(ch, "present");
-    } else {
-      markKey(ch, "absent");
-    }
-  }
-}
-
-// ===============================
-//  BOARD / LOGIKA LITER
-// ===============================
-
-function initBoard() {
+function initBoardStructure() {
   boardEl.innerHTML = "";
-  boardEl.style.gridTemplateColumns = `repeat(${wordLength}, 48px)`;
+  boardEl.style.gridTemplateColumns = `repeat(${wordLength}, 40px)`;
   board = [];
-  row = 0;
-  col = 0;
-  gameOver = false;
 
   for (let r = 0; r < MAX_ROWS; r++) {
     const rowArr = [];
     for (let c = 0; c < wordLength; c++) {
-      const tile = document.createElement("div");
-      tile.className = "tile";
-      boardEl.appendChild(tile);
-      rowArr.push(tile);
+      const div = document.createElement("div");
+      div.className = "tile";
+      boardEl.appendChild(div);
+      rowArr.push(div);
     }
     board.push(rowArr);
   }
 }
 
+function resetBoard() {
+  row = 0;
+  col = 0;
+  for (let r = 0; r < MAX_ROWS; r++) {
+    for (let c = 0; c < wordLength; c++) {
+      const tile = board[r][c];
+      tile.textContent = "";
+      tile.className = "tile";
+    }
+  }
+}
+
+// ===== KLAWIATURA DOTYKOWA =====
+
+const KEYBOARD_LAYOUT = [
+  ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+  ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+  ["enter", "z", "x", "c", "v", "b", "n", "m", "backspace"],
+  ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "ż", "ź"],
+];
+
+function buildKeyboard() {
+  keyboardEl.innerHTML = "";
+  KEYBOARD_LAYOUT.forEach((rowKeys) => {
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "keyboard-row";
+
+    rowKeys.forEach((key) => {
+      const btn = document.createElement("button");
+      btn.className = "key-btn";
+      btn.dataset.key = key;
+
+      if (key === "enter") {
+        btn.textContent = "Enter";
+        btn.classList.add("key-wide");
+      } else if (key === "backspace") {
+        btn.textContent = "⌫";
+        btn.classList.add("key-wide");
+      } else {
+        btn.textContent = key;
+      }
+
+      btn.addEventListener("click", () => handleVirtualKey(key));
+
+      keyboardEl.appendChild(rowDiv);
+      rowDiv.appendChild(btn);
+    });
+
+    keyboardEl.appendChild(rowDiv);
+  });
+
+  // wyczyść stan kolorów klawiszy
+  Object.keys(keyboardState).forEach((k) => delete keyboardState[k]);
+}
+
+function handleVirtualKey(k) {
+  statusEl.textContent = "";
+
+  if (k === "enter") {
+    submitRow();
+    return;
+  }
+  if (k === "backspace") {
+    erase();
+    return;
+  }
+  pressLetter(k);
+}
+
+// ===== LOGIKA STATYSTYK =====
+
+function updateStatsUI() {
+  if (statGamesEl) statGamesEl.textContent = gamesPlayed.toString();
+  if (statWinsEl) statWinsEl.textContent = wins.toString();
+  if (statStreakEl) statStreakEl.textContent = currentStreak.toString();
+  if (statMaxStreakEl) statMaxStreakEl.textContent = maxStreak.toString();
+}
+
+function registerGameFinished(win) {
+  gamesPlayed++;
+  if (win) {
+    wins++;
+    currentStreak++;
+    if (currentStreak > maxStreak) {
+      maxStreak = currentStreak;
+    }
+  } else {
+    currentStreak = 0;
+  }
+  hasUnsavedChanges = true;
+  updateStatsUI();
+}
+
+// ===== ArcadeProgress – load/save/clear =====
+
+function loadProgress() {
+  if (!window.ArcadeProgress || !ArcadeProgress.load) {
+    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.load");
+    return Promise.resolve();
+  }
+
+  return ArcadeProgress.load(GAME_ID)
+    .then(function (data) {
+      if (!data) return;
+
+      if (typeof data.gamesPlayed === "number") gamesPlayed = data.gamesPlayed;
+      if (typeof data.wins === "number") wins = data.wins;
+      if (typeof data.currentStreak === "number")
+        currentStreak = data.currentStreak;
+      if (typeof data.maxStreak === "number") maxStreak = data.maxStreak;
+
+      LAST_SAVE_DATA = data;
+      hasUnsavedChanges = false;
+      updateStatsUI();
+    })
+    .catch(function (err) {
+      console.error("[GAME]", GAME_ID, "Błąd load:", err);
+    });
+}
+
+function buildSavePayload() {
+  return {
+    gamesPlayed,
+    wins,
+    currentStreak,
+    maxStreak,
+  };
+}
+
+function saveCurrentSession() {
+  if (!window.ArcadeProgress || !ArcadeProgress.save) {
+    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.save");
+    return Promise.resolve();
+  }
+
+  const payload = buildSavePayload();
+
+  return ArcadeProgress.save(GAME_ID, payload)
+    .then(function () {
+      LAST_SAVE_DATA = payload;
+      hasUnsavedChanges = false;
+      console.log("[GAME]", GAME_ID, "zapisano:", payload);
+      statusEl.textContent = "Zapisano postęp gry.";
+    })
+    .catch(function (err) {
+      console.error("[GAME]", GAME_ID, "Błąd save:", err);
+      statusEl.textContent = "Błąd zapisu postępu.";
+    });
+}
+
+function clearProgress() {
+  if (!window.ArcadeProgress || !ArcadeProgress.clear) {
+    console.warn("[GAME]", GAME_ID, "Brak ArcadeProgress.clear");
+    return Promise.resolve();
+  }
+
+  return ArcadeProgress.clear(GAME_ID)
+    .then(function () {
+      LAST_SAVE_DATA = null;
+      hasUnsavedChanges = false;
+
+      gamesPlayed = 0;
+      wins = 0;
+      currentStreak = 0;
+      maxStreak = 0;
+      updateStatsUI();
+
+      console.log("[GAME]", GAME_ID, "progress wyczyszczony");
+      statusEl.textContent = "Rekordy wyczyszczone.";
+    })
+    .catch(function (err) {
+      console.error("[GAME]", GAME_ID, "Błąd clear:", err);
+      statusEl.textContent = "Błąd czyszczenia rekordów.";
+    });
+}
+
+// ===== GUARD NA NIEZAPISANE ZMIANY =====
+
+function setupBeforeUnloadGuard() {
+  window.addEventListener("beforeunload", function (e) {
+    if (!hasUnsavedChanges) return;
+    e.preventDefault();
+    e.returnValue = "";
+    return "";
+  });
+}
+
+function setupClickGuard() {
+  document.addEventListener("click", function (e) {
+    if (!hasUnsavedChanges) return;
+
+    const target = e.target.closest("a,button");
+    if (!target) return;
+
+    const href = target.getAttribute("href");
+    const isReturnToArcade =
+      (href && href.indexOf("arcade.html") !== -1) ||
+      target.classList.contains("arcade-back-btn");
+
+    if (isReturnToArcade) {
+      const ok = window.confirm(
+        "Masz niezapisany postęp (statystyki). Wyjść bez zapisywania?"
+      );
+      if (!ok) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  });
+}
+
+// ===== OBSŁUGA PRZYCISKÓW =====
+
+function attachButtonEvents() {
+  if (newGameBtn) {
+    newGameBtn.addEventListener("click", function () {
+      const ok =
+        row === 0 ||
+        row >= MAX_ROWS ||
+        window.confirm(
+          "Rozpocząć nowe słowo? Aktualna próba zostanie przerwana."
+        );
+      if (!ok) return;
+      startNewGame();
+    });
+  }
+
+  if (saveGameBtn) {
+    saveGameBtn.addEventListener("click", function () {
+      saveCurrentSession();
+    });
+  }
+
+  if (resetRecordBtn) {
+    resetRecordBtn.addEventListener("click", function () {
+      const ok = window.confirm(
+        "Na pewno chcesz zresetować rekordy i statystyki dla tej gry?"
+      );
+      if (!ok) return;
+      clearProgress();
+    });
+  }
+
+  if (wordLenSel) {
+    wordLenSel.addEventListener("change", function () {
+      wordLength = parseInt(wordLenSel.value, 10) || 5;
+      startNewGame();
+    });
+  }
+}
+
+// ===== MECHANIKA WORDLE =====
+
 function pressLetter(ch) {
-  if (gameOver) return;
   if (row >= MAX_ROWS) return;
   if (col >= wordLength) return;
-
   const tile = board[row][col];
   tile.textContent = ch.toUpperCase();
   tile.classList.add("filled");
@@ -292,63 +365,105 @@ function pressLetter(ch) {
 }
 
 function erase() {
-  if (gameOver) return;
-  if (col <= 0) return;
-
-  col--;
-  const tile = board[row][col];
-  tile.textContent = "";
-  tile.classList.remove("filled");
+  if (col > 0) {
+    col--;
+    const tile = board[row][col];
+    tile.textContent = "";
+    tile.classList.remove("filled");
+  }
 }
 
 function colorRow(r) {
-  const guessArr = [];
+  const guess = [];
   for (let c = 0; c < wordLength; c++) {
-    guessArr[c] = board[r][c].textContent.toLowerCase();
+    guess[c] = board[r][c].textContent.toLowerCase();
   }
 
-  updateKeyboardColors(guessArr, secret);
+  const secretArr = secret.split("");
+  const used = Array(wordLength).fill(false);
 
+  // Zielone (dokładne trafienia)
   for (let c = 0; c < wordLength; c++) {
     const tile = board[r][c];
-    const ch = guessArr[c];
-    if (secret[c] === ch) {
+    if (guess[c] === secret[c]) {
       tile.classList.add("correct");
-    } else if (secret.includes(ch)) {
+      used[c] = true;
+      updateKeyColor(guess[c], "correct");
+    }
+  }
+
+  // Żółte / szare
+  for (let c = 0; c < wordLength; c++) {
+    const tile = board[r][c];
+    if (tile.classList.contains("correct")) continue;
+
+    const ch = guess[c];
+    const idx = secretArr.findIndex((x, i) => x === ch && !used[i]);
+    if (idx !== -1) {
       tile.classList.add("present");
+      used[idx] = true;
+      updateKeyColor(ch, "present");
     } else {
       tile.classList.add("absent");
+      updateKeyColor(ch, "absent");
     }
   }
 }
 
-function handleGuess() {
-  if (gameOver) return;
+// Aktualizacja klawiatury (priorytet: correct > present > absent)
+
+const KEY_STATE_PRIORITY = {
+  absent: 0,
+  present: 1,
+  correct: 2,
+};
+
+function updateKeyColor(letter, newState) {
+  const current = keyboardState[letter];
+  if (
+    current &&
+    KEY_STATE_PRIORITY[newState] <= KEY_STATE_PRIORITY[current]
+  ) {
+    return;
+  }
+
+  keyboardState[letter] = newState;
+
+  const buttons = keyboardEl.querySelectorAll(".key-btn");
+  buttons.forEach((btn) => {
+    const k = btn.dataset.key;
+    if (k !== letter) return;
+
+    btn.classList.remove("key-correct", "key-present", "key-absent");
+    if (newState === "correct") btn.classList.add("key-correct");
+    if (newState === "present") btn.classList.add("key-present");
+    if (newState === "absent") btn.classList.add("key-absent");
+  });
+}
+
+function submitRow() {
   if (row >= MAX_ROWS) return;
   if (col < wordLength) {
-    setStatus("Za krótkie słowo.");
+    statusEl.textContent = "Wpisz pełne słowo.";
     return;
   }
 
   let guess = "";
-  const guessArr = [];
   for (let c = 0; c < wordLength; c++) {
-    const ch = board[row][c].textContent.toLowerCase();
-    guess += ch;
-    guessArr.push(ch);
+    guess += board[row][c].textContent.toLowerCase();
   }
 
-  if (!isValidWord(wordLength, guess)) {
-    setStatus("Nie znam takiego słowa w słowniku.");
+  if (!validWords.includes(guess)) {
+    statusEl.textContent = "Nie ma takiego słowa!";
     return;
   }
 
   colorRow(row);
 
   if (guess === secret) {
-    setStatus("Brawo! Zgadłeś słowo.");
-    gameOver = true;
-    registerGameResult(true);
+    statusEl.textContent = "Brawo! Trafione!";
+    registerGameFinished(true);
+    row = MAX_ROWS; // blokada dalszej gry
     return;
   }
 
@@ -356,141 +471,92 @@ function handleGuess() {
   col = 0;
 
   if (row >= MAX_ROWS) {
-    setStatus("Koniec prób. Słowo: " + secret.toUpperCase());
-    gameOver = true;
-    registerGameResult(false);
+    statusEl.textContent = "Koniec! Słowo: " + secret.toUpperCase();
+    registerGameFinished(false);
   } else {
-    setStatus("");
+    statusEl.textContent = "";
   }
 }
 
-// ===============================
-//  OBSŁUGA KLAWISZY
-// ===============================
+// ===== NOWA GRA =====
 
-function handleVirtualKey(code) {
-  if (code === "ENTER") {
-    handleGuess();
+function startNewGame() {
+  secret = chooseSecret();
+  if (!secret) {
+    statusEl.textContent =
+      "Brak słów o tej długości w słowniku. Zmień długość słowa.";
     return;
   }
-  if (code === "BACKSPACE") {
-    erase();
-    return;
-  }
-  if (/^[A-Z]$/.test(code)) {
-    pressLetter(code.toLowerCase());
-    return;
-  }
+
+  initBoardStructure();
+  resetBoard();
+  buildKeyboard();
+  statusEl.textContent = "Zgadnij słowo!";
 }
 
-function handlePhysicalKey(e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    handleGuess();
-    return;
-  }
-  if (e.key === "Backspace") {
-    e.preventDefault();
-    erase();
-    return;
-  }
-  if (/^[a-ząćęłńóśżź]$/i.test(e.key)) {
-    pressLetter(e.key.toLowerCase());
-    return;
-  }
+// ===== KLAWIATURA FIZYCZNA =====
+
+function setupKeyboardListener() {
+  document.addEventListener("keydown", (e) => {
+    // nie psujemy np. focusów na polach loginu, ale tutaj gra jest w karcie,
+    // więc uproszczamy i zawsze obsługujemy
+    statusEl.textContent = "";
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitRow();
+      return;
+    }
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      erase();
+      return;
+    }
+    if (/^[a-ząćęłńóśżź]$/i.test(e.key)) {
+      e.preventDefault();
+      pressLetter(e.key.toLowerCase());
+    }
+  });
 }
 
-// ===============================
-//  NOWA GRA
-// ===============================
+// ===== INICJALIZACJA =====
 
-async function newGame() {
-  try {
-    if (newGameBtn) newGameBtn.disabled = true;
-    setStatus("Losuję słowo...");
+function cacheDom() {
+  statusEl = document.getElementById("status");
+  boardEl = document.getElementById("board");
+  wordLenSel = document.getElementById("word-len");
+  keyboardEl = document.getElementById("keyboard");
 
-    // można kiedyś dodać select długości; na razie na sztywno 5
-    wordLength = 5;
+  newGameBtn = document.getElementById("new-game-btn");
+  saveGameBtn = document.getElementById("save-game-btn");
+  resetRecordBtn = document.getElementById("reset-record-btn");
 
-    secret = await getSecretWord(wordLength);
-
-    initBoard();
-    resetKeyboardColors();
-    initKeyboard();
-
-    setStatus("Zgadnij słowo!");
-  } catch (e) {
-    console.error("[NeonWordl] newGame error:", e);
-    setStatus("Błąd ładowania słownika. Spróbuj ponownie później.");
-  } finally {
-    if (newGameBtn) newGameBtn.disabled = false;
-  }
+  statGamesEl = document.getElementById("stat-games");
+  statWinsEl = document.getElementById("stat-wins");
+  statStreakEl = document.getElementById("stat-streak");
+  statMaxStreakEl = document.getElementById("stat-max-streak");
 }
-
-// ===============================
-//  RESET STATYSTYK
-// ===============================
-
-function resetStats() {
-  stats = { wins: 0, total: 0 };
-  saveStats();
-  updateStatsUI();
-  setStatus("Statystyki wyzerowane.");
-}
-
-// ===============================
-//  INICJALIZACJA
-// ===============================
 
 function initGame() {
-  boardEl = document.getElementById("board");
-  keyboardEl = document.getElementById("keyboard");
-  newGameBtn = document.getElementById("new-game-btn");
-  resetStatsBtn = document.getElementById("reset-stats-btn");
-  winsEl = document.getElementById("wins");
-  totalEl = document.getElementById("total");
-
-  // Spróbujemy znaleźć element na status:
-  statusEl = document.getElementById("status");
-  if (!statusEl) {
-    // jeśli nie ma #status – użyjemy podtytułu (pierwszy .game-subtitle)
-    statusEl = document.querySelector(".game-subtitle");
-  }
-
-  if (!boardEl || !keyboardEl) {
-    console.error("[NeonWordl] Brak wymaganych elementów DOM (#board, #keyboard).");
-    return;
-  }
-
-  // Statystyki
-  loadStats();
+  cacheDom();
   updateStatsUI();
 
-  // Klawiatura fizyczna
-  document.addEventListener("keydown", handlePhysicalKey);
+  setupBeforeUnloadGuard();
+  setupClickGuard();
+  setupKeyboardListener();
+  attachButtonEvents();
 
-  // Przyciski UI
-  if (newGameBtn) {
-    newGameBtn.addEventListener("click", () => {
-      newGame();
-    });
-  }
-
-  if (resetStatsBtn) {
-    resetStatsBtn.addEventListener("click", () => {
-      resetStats();
-    });
-  }
-
-  // Przycisk powrotu do Arcade
   if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
     ArcadeUI.addBackToArcadeButton({
       backUrl: "../../../arcade.html",
     });
   }
 
-  // Pierwsza gra
-  newGame();
+  // Ładujemy progres i słownik równolegle
+  Promise.all([loadProgress(), loadDictionary()]).then(() => {
+    wordLength = parseInt(wordLenSel.value, 10) || 5;
+    startNewGame();
+  });
 }
 
 document.addEventListener("DOMContentLoaded", initGame);
