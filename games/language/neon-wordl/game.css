@@ -1,180 +1,134 @@
-/* KARTA GRY */
-
 .game-root {
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
   padding: 1.5rem 1.8rem;
 }
-
-/* NAGŁÓWEK */
 
 .game-header {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 1.25rem;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .game-title {
+  font-size: 2rem;
   margin: 0;
-  font-size: 1.9rem;
 }
 
 .game-subtitle {
-  margin: 0.35rem 0 0;
-  opacity: 0.85;
-  font-size: 0.95rem;
+  margin-top: .25rem;
+  opacity: .85;
 }
 
-/* KONTROLKI */
-
-.controls {
+.score-panel {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: 1rem;
 }
 
-.controls-label {
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-
-/* STATUS + PLANSZA */
-
-.board-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-  margin-top: 0.3rem;
-}
-
-.status {
-  min-height: 1.2rem;
-  font-size: 0.9rem;
-  opacity: 0.9;
+.score-box {
+  background: rgba(255,255,255,0.06);
+  padding: .5rem .8rem;
+  border-radius: .75rem;
   text-align: center;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.12);
+}
+
+.score-label {
+  display: block;
+  font-size: .75rem;
+  opacity: .7;
+}
+
+.score-value {
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .board {
   display: grid;
-  gap: 6px;
   justify-content: center;
-  margin-top: 0.3rem;
+  gap: 4px;
 }
 
 .tile {
-  width: 50px;
-  height: 50px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #0f172a;
+  border: 1px solid #334155;
   display: flex;
   justify-content: center;
   align-items: center;
+  font-size: 24px;
   font-weight: 700;
-  font-size: 1.4rem;
-  background: rgba(15, 23, 42, 0.9);
-  color: #e5e7eb;
+  color: white;
   text-transform: uppercase;
-  box-sizing: border-box;
-  transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
 }
 
 .tile.filled {
-  transform: scale(1.05);
-  border-color: rgba(226, 232, 240, 0.9);
+  border-color: #64748b;
 }
-
-/* Kolory jak Wordle */
 
 .tile.correct {
   background: #22c55e;
-  color: #052e16;
   border-color: #22c55e;
+  color: #022c22;
 }
 
 .tile.present {
+  background: #facc15;
+  border-color: #facc15;
+  color: #422006;
+}
+
+.tile.absent {
+  background: #1e293b;
+  border-color: #475569;
+  color: #64748b;
+}
+
+.keyboard {
+  margin-top: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+}
+
+.key-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.key {
+  padding: .6rem .9rem;
+  border-radius: .5rem;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: .9rem;
+  text-transform: uppercase;
+}
+
+.key.correct {
+  background: #22c55e;
+  color: #022c22;
+  border-color: #22c55e;
+}
+
+.key.present {
   background: #facc15;
   color: #422006;
   border-color: #facc15;
 }
 
-.tile.absent {
+.key.absent {
   background: #1e293b;
   color: #64748b;
-  border-color: #475569;
-}
-
-/* KLAWIATURA EKRANOWA */
-
-.keyboard {
-  display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 1rem;
-}
-
-.word-key {
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.85rem;
-  padding-inline: 0.4rem;
-}
-
-/* Kolory Wordle na bazie arcade-btn */
-
-.word-key.correct {
-  background: #22c55e !important;
-  color: #052e16 !important;
-}
-
-.word-key.present {
-  background: #facc15 !important;
-  color: #422006 !important;
-}
-
-.word-key.absent {
-  background: #475569 !important;
-  color: #cbd5e1 !important;
-}
-
-/* RWD szerokość */
-
-@media (max-width: 640px) {
-  .game-root {
-    padding: 1.2rem 1.1rem 1rem;
-  }
-
-  .game-title {
-    font-size: 1.6rem;
-  }
-
-  .tile {
-    width: 44px;
-    height: 44px;
-    font-size: 1.25rem;
-  }
-
-  .keyboard {
-    grid-template-columns: repeat(9, minmax(0, 1fr));
-  }
-}
-
-/* RWD wysokość – dopasowanie do okna */
-
-@media (max-height: 720px) {
-  .game-root {
-    padding: 1rem 1.2rem;
-  }
-
-  .tile {
-    width: 42px;
-    height: 42px;
-    font-size: 1.2rem;
-  }
-
-  .keyboard {
-    margin-top: 0.7rem;
-  }
 }
