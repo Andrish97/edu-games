@@ -2,7 +2,7 @@
   "id": "znajdz-slowo",
   "name": "Znajdź słowo",
   "description": "Kliknij wyraz, który pasuje do obrazka, odblokowuj światy i zbieraj punkty.",
-  "icon": "🔤",
+  "icon": "?",
   "thumb": null,
   "entry": "index.html"
 }
