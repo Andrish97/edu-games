@@ -1,52 +1,180 @@
+/* KARTA GRY */
+
 .game-root {
-  padding: 1.5rem;
+  padding: 1.5rem 1.8rem;
+}
+
+/* NAGŁÓWEK */
+
+.game-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.25rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.game-title {
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.game-subtitle {
+  margin: 0.35rem 0 0;
+  opacity: 0.85;
+  font-size: 0.95rem;
+}
+
+/* KONTROLKI */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.controls-label {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* STATUS + PLANSZA */
+
+.board-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+}
+
+.status {
+  min-height: 1.2rem;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  text-align: center;
 }
 
 .board {
   display: grid;
   gap: 6px;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 0.3rem;
 }
 
 .tile {
   width: 50px;
   height: 50px;
-  border-radius: 8px;
-  border: 1px solid rgba(148,163,184,0.4);
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
   display: flex;
   justify-content: center;
   align-items: center;
-  font-weight: 600;
-  background: rgba(15,23,42,0.8);
-  font-size: 28px;
+  font-weight: 700;
+  font-size: 1.4rem;
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  text-transform: uppercase;
+  box-sizing: border-box;
+  transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
 }
 
 .tile.filled {
-  border-color: #e2e8f0;
+  transform: scale(1.05);
+  border-color: rgba(226, 232, 240, 0.9);
 }
 
-.tile.correct { background: #22c55e; color: #052e16; }
-.tile.present { background: #facc15; color: #422006; }
-.tile.absent  { background: #1e293b; color: #64748b; }
+/* Kolory jak Wordle */
+
+.tile.correct {
+  background: #22c55e;
+  color: #052e16;
+  border-color: #22c55e;
+}
+
+.tile.present {
+  background: #facc15;
+  color: #422006;
+  border-color: #facc15;
+}
+
+.tile.absent {
+  background: #1e293b;
+  color: #64748b;
+  border-color: #475569;
+}
+
+/* KLAWIATURA EKRANOWA */
 
 .keyboard {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 6px;
-  margin-top: 20px;
+  margin-top: 1rem;
 }
 
-.key {
-  padding: 10px;
-  border-radius: 6px;
-  text-align: center;
-  cursor: pointer;
-  background: #1e293b;
+.word-key {
   font-weight: 600;
-  user-select: none;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  padding-inline: 0.4rem;
 }
 
-.key.correct { background: #22c55e; }
-.key.present { background: #facc15; }
-.key.absent  { background: #475569; }
+/* Kolory Wordle na bazie arcade-btn */
+
+.word-key.correct {
+  background: #22c55e !important;
+  color: #052e16 !important;
+}
+
+.word-key.present {
+  background: #facc15 !important;
+  color: #422006 !important;
+}
+
+.word-key.absent {
+  background: #475569 !important;
+  color: #cbd5e1 !important;
+}
+
+/* RWD szerokość */
+
+@media (max-width: 640px) {
+  .game-root {
+    padding: 1.2rem 1.1rem 1rem;
+  }
+
+  .game-title {
+    font-size: 1.6rem;
+  }
+
+  .tile {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+
+  .keyboard {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+}
+
+/* RWD wysokość – dopasowanie do okna */
+
+@media (max-height: 720px) {
+  .game-root {
+    padding: 1rem 1.2rem;
+  }
+
+  .tile {
+    width: 42px;
+    height: 42px;
+    font-size: 1.2rem;
+  }
+
+  .keyboard {
+    margin-top: 0.7rem;
+  }
+}
