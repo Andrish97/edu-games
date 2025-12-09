@@ -123,9 +123,9 @@ const KEYBOARD_LAYOUT = [
   // rząd 2
   ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
   // rząd 3 – część łacińska + Backspace (po prawej)
-  ["z", "c", "b", "n", "m", "backspace"],
+  ["z", "ź", "ż", "c", "b", "n", "m", "backspace"],
   // rząd 4 – polskie ogonki + Enter na końcu
-  ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "ż", "ź", "enter"],
+  ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "enter"],
 ];
 
 function buildKeyboard() {
