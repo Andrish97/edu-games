@@ -499,6 +499,46 @@ function handleChoice(button, isCorrect) {
     });
   }
 }
+const hintBtn = document.getElementById("hintBtn");
+
+if (hintBtn) {
+  hintBtn.addEventListener("click", async () => {
+    // tylko dla zalogowanych
+    const user = ArcadeAuth.getUser();
+    if (!user) {
+      messageEl.textContent = "Tylko zalogowani mogą używać podpowiedzi.";
+      return;
+    }
+
+    // sprawdź saldo
+    const balance = await ArcadeCoins.getBalance();
+    if (balance < 5) {
+      messageEl.textContent = "Masz za mało diamentów (5💎).";
+      return;
+    }
+
+    // pobranie opłaty
+    await ArcadeCoins.addForGame(GAME_ID, -5, {
+      reason: "hint",
+      correct: currentRound.correct
+    });
+
+    // odśwież wyświetlane monety
+    if (window.ArcadeAuthUI?.refreshCoins) {
+      ArcadeAuthUI.refreshCoins();
+    }
+
+    // efekt podpowiedzi: wyróżniamy poprawną odpowiedź
+    const buttons = document.querySelectorAll(".choice-btn");
+    buttons.forEach(btn => {
+      if (btn.textContent === currentRound.correct) {
+        btn.classList.add("correct");
+      }
+    });
+
+    messageEl.textContent = "Podpowiedź! To właściwy wyraz.";
+  });
+}
 
 // =========================
 // POZIOM / ŚWIAT
