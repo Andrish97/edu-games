@@ -75,15 +75,7 @@
   justify-content: flex-end;
 }
 
-/* Możliwe, że theme ma .btn-ghost – jeśli nie, to delikatnie ją stylujemy */
-
-.btn-ghost {
-  background: transparent !important;
-  border-style: dashed;
-  opacity: 0.9;
-}
-
-/* ŚWIATY U GÓRY */
+/* POZIOMY U GÓRY */
 
 .levels-strip {
   padding: 0.75rem 0.5rem 0.25rem;
@@ -125,8 +117,6 @@
   justify-content: flex-start;
 }
 
-/* Światy – przyciski korzystają z theme przez .arcade-btn */
-
 .level-btn {
   min-width: 2.6rem;
   height: 2.6rem;
@@ -140,7 +130,6 @@
 }
 
 .level-btn.arcade-btn {
-  /* zostawiamy theme, tylko trochę dopieszczamy */
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.9);
 }
 
@@ -176,34 +165,34 @@
   opacity: 0.9;
 }
 
-.round-info strong {
-  font-weight: 600;
-}
-
 /* SŁOWO + KLAWIATURA */
 
 .word-area {
   margin-top: 0.25rem;
-  padding: 1rem 1.1rem;
+  padding: 1.2rem 1.1rem 1rem;
   border-radius: 0.9rem;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.55);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .word-display {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.45rem;
 }
 
 .word-label {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  opacity: 0.7;
+  letter-spacing: 0.16em;
+  opacity: 0.78;
+}
+
+.word-label--phase {
+  font-size: 0.9rem;
 }
 
 .word-label--after {
@@ -212,17 +201,17 @@
 
 .word-original,
 .word-masked {
-  min-height: 2.4rem;
+  min-height: 3rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.7rem;
-  letter-spacing: 0.22em;
-  font-weight: 600;
+  font-size: 2rem;
+  letter-spacing: 0.28em;
+  font-weight: 700;
 }
 
 .word-original {
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .word-masked {
@@ -252,21 +241,44 @@
   transition: transform linear;
 }
 
-/* Klawiatura – przyciski korzystają z motywu przez .arcade-btn */
+/* Klawiatura */
 
 .keyboard {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.4rem;
   justify-content: center;
   margin-top: 0.25rem;
 }
 
 .key-btn {
   min-width: 2.1rem;
-  padding: 0.25rem 0.45rem;
+  padding: 0.3rem 0.45rem;
   border-radius: 0.6rem;
-  font-size: 1rem;
+  font-size: 1.05rem;
+}
+
+/* Akcje pomocnicze */
+
+.secondary-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.secondary-actions-left,
+.secondary-actions-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.secondary-btn {
+  font-size: 0.85rem;
+  padding-inline: 0.7rem;
 }
 
 /* Komunikaty */
@@ -275,7 +287,7 @@
   min-height: 1.2rem;
   font-size: 0.9rem;
   text-align: center;
-  margin-top: 0.3rem;
+  margin-top: 0.4rem;
   opacity: 0.9;
 }
 
@@ -317,7 +329,7 @@
 
   .word-original,
   .word-masked {
-    font-size: 1.4rem;
+    font-size: 1.7rem;
   }
 }
 
@@ -338,7 +350,7 @@
 
   .word-original,
   .word-masked {
-    font-size: 1.3rem;
+    font-size: 1.5rem;
   }
 
   .game-info {
