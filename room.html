@@ -1,0 +1,83 @@
+<!-- room.html – Neon Room / Pokój nagród -->
+
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Neon Arcade – Pokój nagród</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- globalny motyw -->
+    <link rel="stylesheet" href="css/theme.css" />
+    <!-- styl pokoju -->
+    <link rel="stylesheet" href="css/room.css" />
+
+    <!-- supabase -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+      defer
+    ></script>
+
+    <!-- core Neon Arcade -->
+    <script src="js/core/auth.js" defer></script>
+    <script src="js/core/progress.js" defer></script>
+    <script src="js/core/coins.js" defer></script>
+    <script src="js/core/auth-bar.js" defer></script>
+    <script src="js/core/ui.js" defer></script>
+
+    <!-- logika pokoju -->
+    <script src="js/pages/room.js" defer></script>
+  </head>
+  <body>
+    <div data-arcade-auth-bar data-after-login="room.html"></div>
+
+    <main class="room-page">
+      <header class="room-header">
+        <div class="room-title-block">
+          <h1 class="room-title">Neon Room</h1>
+          <p class="room-subtitle">
+            Wydawaj 💎 na ozdoby i urządzaj swój wirtualny pokój.
+          </p>
+        </div>
+        <div class="room-balance">
+          <span class="room-balance-label">Twoje 💎:</span>
+          <span class="room-balance-value" id="room-balance">–</span>
+        </div>
+      </header>
+
+      <section class="room-layout">
+        <aside class="room-shop-panel">
+          <h2 class="room-panel-title">Sklep z ozdobami</h2>
+          <p class="room-panel-desc">
+            Kupuj, ulepszaj i ustawiaj ozdoby w swoim pokoju.
+          </p>
+          <div id="shop-list" class="shop-list"></div>
+        </aside>
+
+        <section class="room-grid-panel">
+          <div class="room-grid-top">
+            <h2 class="room-panel-title">Twój pokój</h2>
+            <div class="room-grid-actions">
+              <button type="button" class="room-btn" id="btn-room-reset">
+                Wyczyść pokój
+              </button>
+              <button type="button" class="room-btn room-btn-secondary" id="btn-room-save">
+                Zapisz pokój
+              </button>
+            </div>
+          </div>
+
+          <div class="room-grid-wrapper">
+            <div class="room-grid-bg"></div>
+            <div class="room-grid" id="room-grid"></div>
+          </div>
+
+          <p class="room-hint">
+            Kliknij przedmiot w sklepie, aby go kupić lub ulepszyć. Kliknij
+            pole w pokoju, aby przenieść zaznaczoną ozdobę.
+          </p>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
