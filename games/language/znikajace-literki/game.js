@@ -718,8 +718,8 @@ function onHintClick() {
 
   ArcadeCoins.getBalance()
     .then(function (balance) {
-      if (typeof balance !== "number" || balance <= 0) {
-        showMessage("Za mało diaxów na podpowiedź.", "error");
+      if (typeof balance !== "number" || balance < 5) {
+        showMessage("Za mało diaxów na podpowiedź.(koszt 5 💎)", "error");
         return;
       }
 
@@ -731,7 +731,7 @@ function onHintClick() {
       renderMaskedWord();
 
       // pobierz 1 diaxa
-      return ArcadeCoins.addForGame(GAME_ID, -1, {
+      return ArcadeCoins.addForGame(GAME_ID, -5, {
         reason: "hint",
         level: currentLevel.id,
         wordLength: currentWord.length
@@ -740,7 +740,7 @@ function onHintClick() {
           if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
             ArcadeAuthUI.refreshCoins();
           }
-          showMessage("Odkryto literkę (-1 💎).", "info");
+          showMessage("Odkryto literkę (-5 💎).", "info");
         })
         .catch(function (err) {
           console.error("[GAME]", GAME_ID, "błąd obciążenia za hint:", err);
