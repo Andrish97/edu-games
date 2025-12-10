@@ -4,95 +4,56 @@
     <meta charset="UTF-8" />
     <title>Znajdź słowo – Neon Arcade</title>
 
-    <!-- Motyw globalny -->
     <link rel="stylesheet" href="../../../css/theme.css" />
-    <!-- Styl gry -->
     <link rel="stylesheet" href="game.css" />
 
-    <!-- Supabase – musi być przed auth.js -->
-    <script
-      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-      defer
-    ></script>
-
-    <!-- Core -->
     <script src="../../../js/core/auth.js" defer></script>
-    <script src="../../../js/core/auth-bar.js" defer></script>
     <script src="../../../js/core/progress.js" defer></script>
+    <script src="../../../js/core/coins.js" defer></script>
+    <script src="../../../js/core/auth-bar.js" defer></script>
     <script src="../../../js/core/ui.js" defer></script>
 
-    <!-- Logika gry -->
     <script src="game.js" defer></script>
   </head>
-  <body class="arcade-body arcade-game-page">
-    <div
-      data-arcade-auth-bar
-      data-after-login="../../../arcade.html"
-      data-after-guest="../../../arcade.html"
-    ></div>
+  <body>
+    <div data-arcade-auth-bar></div>
 
-    <div class="shell">
-      <div class="card game-root">
-        <header class="game-header">
-          <div>
-            <h1 class="game-title">Znajdź słowo</h1>
-            <p class="game-subtitle">
-              Kliknij wyraz, który pasuje do obrazka. Odblokowuj kolejne światy.
-            </p>
+    <div class="game-root">
+      <div class="znajdz-slowo-screen">
+        <div class="card znajdz-slowo-card">
+          <div class="title">Znajdź słowo</div>
+
+          <div class="worlds-row" id="worldsRow">
+            <!-- przyciski światów generuje JS -->
           </div>
 
-          <div class="score-panel">
-            <div class="score-box">
-              <span class="score-label">Punkty</span>
-              <span id="score" class="score-value">0</span>
-            </div>
-            <div class="score-box">
-              <span class="score-label">Światy</span>
-              <span id="unlocked-worlds-label" class="score-value">1 / 9</span>
+          <div class="top-row">
+            <div class="world-name" id="worldNameLabel">Świat: Zwierzęta</div>
+            <div class="streak-info">
+              Seria: <span id="streak">0</span>
             </div>
           </div>
 
-          <div class="score-panel score-panel--controls">
-            <button id="new-game-btn" class="btn-primary">Nowa gra</button>
-            <button id="save-game-btn" class="btn-primary">Zapisz</button>
-            <button id="reset-record-btn" class="btn-primary">
+          <div class="progress-wrapper">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+
+          <div class="emoji-box" id="emoji">🐱</div>
+          <div class="hint" id="hint">
+            Kliknij wyraz, który pasuje do obrazka.
+          </div>
+
+          <div class="choices" id="choices"></div>
+
+          <div id="message"></div>
+
+          <div class="bottom-row">
+            <div id="score">Punkty: 0</div>
+            <button id="next">Następne</button>
+            <button id="resetProgress" class="reset-progress-btn">
               Wyczyść postęp
             </button>
           </div>
-        </header>
-
-        <div class="worlds-row" id="worldsRow">
-          <!-- przyciski światów wypełni JS -->
-        </div>
-
-        <div class="top-row">
-          <div class="world-name" id="worldNameLabel">Świat: Zwierzęta</div>
-          <div class="streak-info">
-            Seria: <span id="streak">0</span>
-          </div>
-        </div>
-
-        <div class="progress-wrapper">
-          <div class="progress-bar" id="progressBar"></div>
-        </div>
-
-        <div class="emoji-box" id="emoji">🐱</div>
-
-        <div class="hint" id="hint">
-          Kliknij wyraz, który pasuje do obrazka.
-        </div>
-
-        <div class="choices" id="choices"></div>
-
-        <div id="message"></div>
-
-        <div class="bottom-row">
-          <div class="bottom-info">
-            Rozegrane pytania w świecie:
-            <span id="question-counter">0</span> /
-            <span id="questions-per-level-label">6</span>
-          </div>
-          <button id="next" class="btn-primary">Następne</button>
         </div>
       </div>
     </div>
