@@ -361,6 +361,59 @@ function spawnPiece() {
   }
 }
 
+// === DIAMENTY: obliczanie nagrody ===
+
+// Żeby nie było zbyt łatwo:
+// - poniżej 500 punktów – 0 💎
+// - baza: score / 500 (zaokrąglone w dół)
+// - + bonus za poziom i linie
+// - twardy limit: max 30 💎 na run
+function computeCoinReward() {
+  if (score < 500) return 0;
+
+  const base = Math.floor(score / 500); // co 500 pkt ~1 diament
+  const levelBonus = Math.max(0, level - 2); // dopiero od poziomu 3 coś wpada
+  const linesBonus = Math.floor(linesCleared / 12); // co 12 linii +1
+
+  let total = base + levelBonus + linesBonus;
+
+  if (total > 30) total = 30;
+  return total;
+}
+
+function awardCoinsOnGameOver() {
+  if (!window.ArcadeCoins || !ArcadeCoins.addForGame) {
+    console.warn("[GAME]", GAME_ID, "Brak ArcadeCoins.addForGame");
+    return;
+  }
+
+  const amount = computeCoinReward();
+  if (amount <= 0) {
+    console.log("[GAME]", GAME_ID, "brak diamentów – zbyt niski wynik:", {
+      score,
+      level,
+      linesCleared
+    });
+    return;
+  }
+
+  ArcadeCoins.addForGame(GAME_ID, amount, {
+    reason: "game_over",
+    score,
+    level,
+    linesCleared
+  })
+    .then(() => {
+      console.log("[GAME]", GAME_ID, "przyznano diamenty:", amount);
+      if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
+        ArcadeAuthUI.refreshCoins();
+      }
+    })
+    .catch(err => {
+      console.error("[GAME]", GAME_ID, "błąd przyznawania diamentów:", err);
+    });
+}
+
 function gameOver() {
   isGameOver = true;
   cancelAnimationFrame(animationId);
@@ -372,6 +425,9 @@ function gameOver() {
   totalGames += 1;
   updateMetaUI();
   hasUnsavedChanges = true;
+
+  // Diamenty za run
+  awardCoinsOnGameOver();
 
   if (overlayEl) {
     overlayEl.classList.remove("overlay--hidden");
@@ -875,7 +931,7 @@ function attachEvents() {
     });
   }
 
-  // Sterowanie dotykowe – click działa też jako tap na mobile
+  // Sterowanie dotykowe – click = tap
   if (btnLeft) {
     btnLeft.addEventListener("click", function () {
       if (isGameOver || isPaused) return;
@@ -946,6 +1002,13 @@ function initGame() {
 
   attachEvents();
   updatePauseButtonLabel();
+
+  // Ładowanie monet – żeby pasek pokazał saldo
+  if (window.ArcadeCoins && ArcadeCoins.load) {
+    ArcadeCoins.load().catch(err => {
+      console.error("[GAME]", GAME_ID, "Błąd ArcadeCoins.load:", err);
+    });
+  }
 
   loadProgress().then(function () {
     updateMetaUI();
