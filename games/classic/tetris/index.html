@@ -9,23 +9,18 @@
     <!-- Style gry -->
     <link rel="stylesheet" href="game.css" />
 
-    <!-- Supabase – przed auth.js -->
-    <script
-      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-      defer
-    ></script>
-
     <!-- Core -->
     <script src="../../../js/core/auth.js" defer></script>
-    <script src="../../../js/core/auth-bar.js" defer></script>
     <script src="../../../js/core/progress.js" defer></script>
+    <script src="../../../js/core/coins.js" defer></script>
+    <script src="../../../js/core/auth-bar.js" defer></script>
     <script src="../../../js/core/ui.js" defer></script>
 
     <!-- Logika gry -->
     <script src="game.js" defer></script>
   </head>
   <body class="arcade-body arcade-game-page">
-    <!-- Pasek logowania -->
+    <!-- Pasek logowania + diamenty -->
     <div
       data-arcade-auth-bar
       data-after-login="../../../arcade.html"
@@ -38,8 +33,7 @@
           <div>
             <h1 class="game-title">Neon Tetris</h1>
             <p class="game-subtitle">
-              Układaj spadające klocki, twórz pełne linie i zdobywaj jak najwyższy
-              wynik.
+              Układaj spadające klocki, twórz linie i walcz o rekord (i diamenty 💎).
             </p>
           </div>
 
@@ -59,10 +53,10 @@
           </div>
 
           <div class="score-panel score-panel--buttons">
-            <button id="new-game-btn" class="arcade-btn btn-primary">Nowa gra</button>
-            <button id="pause-btn" class="arcade-btn btn-primary">Pauza</button>
-            <button id="save-game-btn" class="arcade-btn btn-primary">Zapisz</button>
-            <button id="reset-record-btn" class="arcade-btn arcade-btn--ghost">
+            <button id="new-game-btn" class="arcade-btn">Nowa gra</button>
+            <button id="pause-btn" class="arcade-btn">Pauza</button>
+            <button id="save-game-btn" class="arcade-btn">Zapisz</button>
+            <button id="reset-record-btn" class="arcade-btn">
               Resetuj rekord
             </button>
           </div>
@@ -73,7 +67,7 @@
             <!-- Plansza -->
             <canvas id="game" width="240" height="480"></canvas>
 
-            <!-- Sterowanie dotykowe (pokazywane tylko na urządzeniach dotykowych) -->
+            <!-- Sterowanie dotykowe (tylko na urządzeniach dotykowych) -->
             <div class="touch-controls">
               <button id="btn-left" class="arcade-btn touch-btn">←</button>
               <button id="btn-right" class="arcade-btn touch-btn">→</button>
@@ -104,8 +98,7 @@
                 <b>Spacja</b> – twardy spadek
               </div>
               <p class="controls-note">
-                Po <b>Game Over</b> użyj przycisku <b>Nowa gra</b>, aby
-                zrestartować.
+                Diamenty 💎 dostajesz za dobre wyniki. Słabe runy – bez nagrody.
               </p>
             </div>
 
