@@ -232,10 +232,11 @@ window.ArcadeAuthUI = {
 
     function setCoinsLoggedOut() {
       if (coins) {
-        coins.textContent = "Monety: –";
+        // monetka + kreska przy gościu
+        coins.textContent = "💎 –";
       }
       if (coinsHint) {
-        coinsHint.textContent = "Zaloguj się, aby zdobywać monety";
+        coinsHint.textContent = "Zaloguj się, aby zdobywać 💎";
         coinsHint.style.display = "inline";
       }
     }
@@ -244,7 +245,7 @@ window.ArcadeAuthUI = {
       if (!coins) return;
     
       if (!window.ArcadeCoins || !ArcadeCoins.load) {
-        coins.textContent = "Monety: –";
+        coins.textContent = "💎 –";
         if (coinsHint) {
           coinsHint.textContent = "Monety dostępne po zalogowaniu.";
           coinsHint.style.display = "inline";
@@ -252,7 +253,8 @@ window.ArcadeAuthUI = {
         return;
       }
     
-      coins.textContent = "Monety: ładowanie...";
+      // mały „loading”
+      coins.textContent = "💎 …";
       if (coinsHint) {
         coinsHint.style.display = "none";
       }
@@ -263,22 +265,21 @@ window.ArcadeAuthUI = {
             typeof balance === "number" && !Number.isNaN(balance)
               ? balance
               : 0;
-          coins.textContent = "Monety: " + val;
+          // tu już finalny tekst
+          coins.textContent = "💎 " + val;
           if (coinsHint) {
             coinsHint.style.display = "none";
           }
         })
         .catch(function (e) {
           console.error("[ArcadeAuthUI] coins load error:", e);
-          coins.textContent = "Monety: –";
+          coins.textContent = "💎 –";
           if (coinsHint) {
             coinsHint.textContent = "Nie udało się wczytać monet.";
             coinsHint.style.display = "inline";
           }
         });
     }
-
-
     
     function switchToLoginMode() {
       mode = "login";
