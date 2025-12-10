@@ -230,6 +230,56 @@ window.ArcadeAuthUI = {
       }
     }
 
+    function setCoinsLoggedOut() {
+      if (coins) {
+        coins.textContent = "Monety: –";
+      }
+      if (coinsHint) {
+        coinsHint.textContent = "Zaloguj się, aby zdobywać monety";
+        coinsHint.style.display = "inline";
+      }
+    }
+    
+    function loadCoinsForUser() {
+      if (!coins) return;
+    
+      if (!window.ArcadeCoins || !ArcadeCoins.load) {
+        coins.textContent = "Monety: –";
+        if (coinsHint) {
+          coinsHint.textContent = "Monety dostępne po zalogowaniu.";
+          coinsHint.style.display = "inline";
+        }
+        return;
+      }
+    
+      coins.textContent = "Monety: ładowanie...";
+      if (coinsHint) {
+        coinsHint.style.display = "none";
+      }
+    
+      ArcadeCoins.load()
+        .then(function (balance) {
+          var val =
+            typeof balance === "number" && !Number.isNaN(balance)
+              ? balance
+              : 0;
+          coins.textContent = "Monety: " + val;
+          if (coinsHint) {
+            coinsHint.style.display = "none";
+          }
+        })
+        .catch(function (e) {
+          console.error("[ArcadeAuthUI] coins load error:", e);
+          coins.textContent = "Monety: –";
+          if (coinsHint) {
+            coinsHint.textContent = "Nie udało się wczytać monet.";
+            coinsHint.style.display = "inline";
+          }
+        });
+    }
+
+
+    
     function switchToLoginMode() {
       mode = "login";
       if (pass2) {
@@ -268,6 +318,7 @@ window.ArcadeAuthUI = {
         if (btnLogout) btnLogout.style.display = "inline-flex";
 
         setStatus("Zalogowany jako: " + (user.email || "użytkownik"));
+        loadCoinsForUser();
       } else {
         // Niezalogowany: pokaż pola i przyciski
         if (email) email.style.display = "inline-block";
@@ -285,9 +336,12 @@ window.ArcadeAuthUI = {
         if (btnLogout) btnLogout.style.display = "none";
 
         setStatus("Gość (niezalogowany)");
+        setCoinsLoggedOut();
       }
     }
 
+
+    
     // startowo: tryb logowania
     switchToLoginMode();
     setStatus("Ładuję status...");
