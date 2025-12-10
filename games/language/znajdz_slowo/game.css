@@ -152,7 +152,7 @@
     0 0 0 1px rgba(248, 250, 252, 0.06);
 }
 
-/* PODPOWIEDŹ */
+/* PODPOWIEDŹ TEKSTOWA */
 
 .hint {
   font-size: 14px;
@@ -270,7 +270,7 @@
   text-align: center;
 }
 
-/* PRZYCISKI */
+/* PRZYCISK NASTĘPNE */
 
 button#next {
   padding: 6px 14px;
@@ -300,31 +300,7 @@ button#next:active {
   filter: brightness(0.97);
 }
 
-.reset-progress-btn {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.45);
-}
-
-/* RWD */
-
-@media (max-width: 480px) {
-  .znajdz-slowo-card {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .emoji-box {
-    width: 96px;
-    height: 96px;
-    font-size: 48px;
-  }
+/* PRZYCISK PODPOWIEDZI */
 
 .btn-hint {
   padding: 6px 14px;
@@ -350,6 +326,51 @@ button#next:active {
   cursor: default;
 }
 
+/* RESET POSTĘPU – mniej widoczny, osobny wiersz */
+
+.reset-row {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reset-progress-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 400;
+  color: #fecaca;
+  box-shadow: none;
+  opacity: 0.7;
+  transition:
+    opacity 0.1s ease,
+    background 0.1s ease,
+    border-color 0.1s ease;
+}
+
+.reset-progress-btn:hover {
+  opacity: 1;
+  background: rgba(127, 29, 29, 0.5);
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+/* RWD */
+
+@media (max-width: 480px) {
+  .znajdz-slowo-card {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .emoji-box {
+    width: 96px;
+    height: 96px;
+    font-size: 48px;
+  }
 
   .choice-btn {
     font-size: 14px;
