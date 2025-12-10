@@ -1,12 +1,10 @@
 /* ===== LAYOUT KARTY ===== */
 
-/* Wycentrowanie karty w arcade */
 .shell {
   display: flex;
   justify-content: center;
 }
 
-/* Główna karta gry */
 .game-root {
   border-radius: 1rem;
   background: rgba(15, 23, 42, 0.9);
@@ -16,14 +14,12 @@
   flex-direction: column;
   gap: 0.9rem;
 
-  /* wysokość: tyle, ile potrzeba – resztę przewija cała strona */
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
   overflow: visible;
 }
 
-/* na bardzo szerokich ekranach trochę węższa karta */
 @media (min-width: 1200px) {
   .game-root {
     max-width: 900px;
@@ -137,7 +133,7 @@
   font-size: 0.78rem;
 }
 
-/* Na węższych ekranach – wszystko pod tytułem, jeden kolumnowy layout */
+/* ===== MOBILE HEADER ===== */
 
 @media (max-width: 768px) {
   .game-header {
@@ -327,8 +323,6 @@
   font-size: 0.82rem;
 }
 
-/* Kolory jak w kafelkach */
-
 .key-correct {
   background: #22c55e;
   border-color: #22c55e;
@@ -355,7 +349,7 @@
   margin-top: 0.15rem;
 }
 
-/* ===== RESPONSYWNOŚĆ – szerokość ===== */
+/* ===== RESPONSYWNOŚĆ ===== */
 
 @media (max-width: 640px) {
   .game-root {
@@ -380,8 +374,6 @@
     min-width: 60px;
   }
 }
-
-/* ===== RESPONSYWNOŚĆ – wysokość ===== */
 
 @media (max-height: 720px) {
   .game-root {
