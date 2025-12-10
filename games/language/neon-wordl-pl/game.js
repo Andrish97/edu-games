@@ -311,9 +311,7 @@ function clearProgress() {
 // ===== MONETY / PODPOWIEDZI =====
 
 function initCoins() {
-  if (!canUseCoins()) {
-    return;
-  }
+  if (!canUseCoins()) return;
 
   ArcadeCoins.load()
     .then(() => {
@@ -345,7 +343,7 @@ async function useHint() {
     const balance = await ArcadeCoins.getBalance();
     if (typeof balance !== "number" || balance < HINT_COST) {
       statusEl.textContent =
-        "Za mało diamentów na podpowiedź. Zdobądź je, wygrywając gry.";
+        "Za mało diamentów na podpowiedź (koszt: 5💎). Zdobądź je, wygrywając gry.";
       hintBtn.disabled = false;
       return;
     }
@@ -371,7 +369,7 @@ async function useHint() {
 
     const letter = secret[pos].toUpperCase();
 
-    // próbujemy ODJĄĆ diamenty
+    // >>> tu próbujemy ODJĄĆ 5 diamentów <<<
     await ArcadeCoins.addForGame(GAME_ID, -HINT_COST, {
       reason: "hint",
       position: pos,
@@ -385,7 +383,7 @@ async function useHint() {
     if (hintTextEl) {
       hintTextEl.textContent = `Podpowiedź: na pozycji ${
         pos + 1
-      } jest litera ${letter}. (-${HINT_COST}💎)`;
+      } jest litera ${letter}. (-5💎)`;
     }
   } catch (err) {
     console.error("[WORDL] błąd podpowiedzi:", err);
