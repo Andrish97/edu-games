@@ -54,48 +54,63 @@ window.ArcadeCoins = window.ArcadeCoins || {};
   }
 
   async function ensureLoaded() {
-    if (_loaded && _loadingPromise === null) return _balance;
+    if (_loaded && !_loadingPromise) return _balance;
     if (_loadingPromise) return _loadingPromise;
+
     _loadingPromise = loadInternal().finally(() => {
       _loadingPromise = null;
     });
+
     return _loadingPromise;
   }
 
-  async function saveDelta(amount, meta) {
+  // zapisujemy „absolutny” stan monet — bez funkcji SQL, zwykły upsert
+  async function saveAbsolute(newBalance, meta) {
     const supabase = getSupabase();
     if (!supabase) return;
 
     const user = await requireUser(supabase);
-    const delta = Math.floor(amount);
-    if (!Number.isFinite(delta) || delta === 0) return;
+    const coins = Math.max(0, Math.floor(newBalance));
 
-    // upsert z inkrementacją
-    const { data, error } = await supabase.rpc("arcade_add_coins", {
-      p_user_id: user.id,
-      p_delta: delta
-    });
+    const { data, error } = await supabase
+      .from("arcade_wallets")
+      .upsert(
+        {
+          user_id: user.id,
+          coins: coins,
+          updated_at: new Date().toISOString()
+        },
+        {
+          onConflict: "user_id"
+        }
+      )
+      .select("coins")
+      .single();
 
     if (error) {
       console.error(logPrefix, "Błąd zapisu:", error);
       throw error;
     }
 
-    _balance = data?.coins ?? _balance + delta;
+    _balance = data?.coins ?? coins;
+
     console.log(
       logPrefix,
-      `+${delta} monet za`,
-      meta || {},
-      "→ saldo:",
-      _balance
+      "ustawiono saldo →",
+      _balance,
+      "meta:",
+      meta || {}
     );
+
     return _balance;
   }
 
-  // Eksponowane API:
+  // =======================
+  //  API, z którego korzystają gry
+  // =======================
 
   /**
-   * Ładuje saldo użytkownika (tylko dla zalogowanych).
+   * Ładuje saldo monet zalogowanego użytkownika.
    * Zwraca Promise<number>.
    */
   ArcadeCoins.load = async function () {
@@ -108,7 +123,7 @@ window.ArcadeCoins = window.ArcadeCoins || {};
   };
 
   /**
-   * Zwraca ostatnio znane saldo (bez czekania na supabase).
+   * Zwraca ostatnio znane saldo (bez czekania na Supabase).
    */
   ArcadeCoins.getBalance = function () {
     return _balance;
@@ -116,7 +131,7 @@ window.ArcadeCoins = window.ArcadeCoins || {};
 
   /**
    * Dodaje monety za konkretną grę.
-   * amount > 0, tylko dla zalogowanych użytkowników.
+   * amount > 0, tylko dla zalogowanych.
    */
   ArcadeCoins.addForGame = async function (gameId, amount, extraMeta) {
     const delta = Math.floor(amount);
@@ -124,7 +139,8 @@ window.ArcadeCoins = window.ArcadeCoins || {};
 
     try {
       await ensureLoaded();
-      return await saveDelta(delta, {
+      const newBalance = _balance + delta;
+      return await saveAbsolute(newBalance, {
         type: "game",
         gameId: gameId,
         ...(extraMeta || {})
