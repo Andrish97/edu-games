@@ -17,8 +17,9 @@
 
     <!-- Core -->
     <script src="../../../js/core/auth.js" defer></script>
-    <script src="../../../js/core/auth-bar.js" defer></script>
     <script src="../../../js/core/progress.js" defer></script>
+    <script src="../../../js/core/coins.js" defer></script>
+    <script src="../../../js/core/auth-bar.js" defer></script>
     <script src="../../../js/core/ui.js" defer></script>
 
     <!-- Logika gry -->
@@ -71,6 +72,20 @@
                 Resetuj rekord
               </button>
             </div>
+
+            <div class="hint-panel">
+              <div class="hint-meta">
+                <span class="hint-label">Podpowiedzi za 💎</span>
+                <span class="hint-cost">Odsłoń jedną literę za 3 diamenty.</span>
+                <span class="hint-balance">
+                  Twoje 💎:
+                  <span id="coins-balance">–</span>
+                </span>
+              </div>
+              <button id="hint-btn" class="arcade-btn btn-secondary">
+                Podpowiedź za 3 💎
+              </button>
+            </div>
           </div>
         </header>
 
@@ -90,6 +105,7 @@
           <div class="board-status-wrapper">
             <div id="board" class="board"></div>
             <div id="status" class="status-text">Ładowanie słownika...</div>
+            <div id="hint-text" class="hint-text"></div>
           </div>
 
           <div id="keyboard" class="keyboard"></div>
@@ -98,7 +114,8 @@
         <footer class="game-info">
           <p>
             Sterowanie: klawiatura fizyczna lub dotykowa poniżej. Masz 6 prób
-            na odgadnięcie słowa.
+            na odgadnięcie słowa. Wygrywając, zdobywasz diamenty 💎, które możesz
+            wydać na podpowiedzi.
           </p>
         </footer>
       </div>
