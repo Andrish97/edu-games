@@ -1,11 +1,15 @@
 // js/pages/arcade.js
+// Widok launchera gier:
+// - zakładki kategorii (games.json -> categories)
+// - kafelki gier w aktywnej kategorii (meta.json każdej gry)
+// - statystyki z ArcadeProgress (bestScore, totalGames)
+// - saldo monet z ArcadeCoins
 
 (function () {
   const CATEGORIES_CONTAINER_SELECTOR = "#categories";
   const GAMES_SECTION_SELECTOR = "#games-section";
   const GAMES_CONTAINER_SELECTOR = "#games";
   const GAMES_SECTION_TITLE_SELECTOR = "#games-section-title";
-  const BACK_BTN_SELECTOR = "#back-to-categories";
 
   let categories = [];
   const gameMetaCache = new Map();
@@ -38,9 +42,56 @@
     el.style.display = "none";
   }
 
-  // ------------------------------
-  // Ładowanie games.json
-  // ------------------------------
+  // --------------------------------------------------
+  // Portfel monet (ArcadeCoins)
+  // --------------------------------------------------
+
+  function initWallet() {
+    const balanceEl = document.getElementById("arcade-wallet-balance");
+    const guestHintEl = document.getElementById("arcade-wallet-guest-hint");
+
+    if (!balanceEl || !window.supabase) {
+      return;
+    }
+
+    window.supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("[arcade] getUser wallet error:", error);
+        }
+
+        if (!data || !data.user) {
+          balanceEl.textContent = "–";
+          if (guestHintEl) guestHintEl.hidden = false;
+          return;
+        }
+
+        if (!window.ArcadeCoins || !ArcadeCoins.load) {
+          balanceEl.textContent = "–";
+          if (guestHintEl) guestHintEl.hidden = false;
+          return;
+        }
+
+        ArcadeCoins.load().then((balance) => {
+          const val =
+            typeof balance === "number" && !Number.isNaN(balance)
+              ? balance
+              : 0;
+          balanceEl.textContent = String(val);
+          if (guestHintEl) guestHintEl.hidden = true;
+        });
+      })
+      .catch((err) => {
+        console.error("[arcade] wallet init exception:", err);
+        balanceEl.textContent = "–";
+        if (guestHintEl) guestHintEl.hidden = false;
+      });
+  }
+
+  // --------------------------------------------------
+  // Ładowanie kategorii z games.json
+  // --------------------------------------------------
 
   function loadCategories() {
     showLoading();
@@ -68,18 +119,21 @@
       });
   }
 
-  // ------------------------------
-  // Render zakładek kategorii
-  // ------------------------------
+  // --------------------------------------------------
+  // Zakładki kategorii (tabs)
+  // --------------------------------------------------
 
   function renderCategoryTabs() {
     const container = $(CATEGORIES_CONTAINER_SELECTOR);
     const gamesSection = $(GAMES_SECTION_SELECTOR);
 
-    if (!container) return;
+    if (!container) {
+      console.warn("[arcade] Brak kontenera kategorii (#categories).");
+      return;
+    }
 
     container.innerHTML = "";
-    if (gamesSection) gamesSection.hidden = true;
+    if (gamesSection) gamesSection.hidden = false;
 
     if (!categories.length) {
       container.innerHTML =
@@ -87,7 +141,7 @@
       return;
     }
 
-    categories.forEach((cat) => {
+    categories.forEach((cat, index) => {
       const icon = cat.icon || "";
       const name = cat.name || cat.id;
 
@@ -103,12 +157,14 @@
       tab.addEventListener("click", () => onCategoryClick(cat, tab));
 
       container.appendChild(tab);
+
+      // automatycznie wybieramy pierwszą kategorię
+      if (index === 0) {
+        tab.classList.add("active");
+        onCategoryClick(cat, tab);
+      }
     });
   }
-
-  // ------------------------------
-  // Kliknięcie kategorii
-  // ------------------------------
 
   function onCategoryClick(category, clickedTab) {
     const tabs = document.querySelectorAll(".category-tab");
@@ -119,7 +175,10 @@
     const gamesContainer = $(GAMES_CONTAINER_SELECTOR);
     const titleEl = $(GAMES_SECTION_TITLE_SELECTOR);
 
-    if (!gamesSection || !gamesContainer || !titleEl) return;
+    if (!gamesSection || !gamesContainer || !titleEl) {
+      console.warn("[arcade] Brak elementów sekcji gier.");
+      return;
+    }
 
     gamesSection.hidden = false;
     gamesContainer.innerHTML = "";
@@ -154,6 +213,10 @@
       });
   }
 
+  // --------------------------------------------------
+  // meta.json gier
+  // --------------------------------------------------
+
   function loadGameMeta(folder, gameId) {
     const cacheKey = folder + "/" + gameId;
     if (gameMetaCache.has(cacheKey)) {
@@ -182,9 +245,9 @@
       });
   }
 
-  // ------------------------------
-  // Render kafelków gier + statystyki
-  // ------------------------------
+  // --------------------------------------------------
+  // Kafle gier + statystyki (ArcadeProgress)
+  // --------------------------------------------------
 
   function renderGameCards(metas, container, category) {
     if (!metas.length) {
@@ -234,7 +297,7 @@
 
       frag.appendChild(card);
 
-      // asynchroniczne wczytanie statystyk z ArcadeProgress
+      // asynchroniczne wczytanie statystyk konkretnej gry
       loadGameStats(gameId);
     });
 
@@ -242,16 +305,13 @@
     container.appendChild(frag);
   }
 
-  // ------------------------------
-  // Statystyki gry z ArcadeProgress
-  // ------------------------------
-
   function loadGameStats(gameId) {
+    const statEls = document.querySelectorAll(
+      `.game-stats[data-game-stats="${gameId}"]`
+    );
+    if (!statEls.length) return;
+
     if (!window.ArcadeProgress || !ArcadeProgress.load) {
-      // Brak systemu progresu — ukrywamy tekst
-      const statEls = document.querySelectorAll(
-        `.game-stats[data-game-stats="${gameId}"]`
-      );
       statEls.forEach((el) => {
         el.textContent = "Statystyki niedostępne.";
       });
@@ -260,10 +320,6 @@
 
     ArcadeProgress.load(gameId)
       .then((data) => {
-        const statEls = document.querySelectorAll(
-          `.game-stats[data-game-stats="${gameId}"]`
-        );
-
         if (!statEls.length) return;
 
         if (!data) {
@@ -273,12 +329,17 @@
           return;
         }
 
-        const best = typeof data.bestScore === "number" ? data.bestScore : null;
+        const best =
+          typeof data.bestScore === "number" && !Number.isNaN(data.bestScore)
+            ? data.bestScore
+            : null;
         const total =
-          typeof data.totalGames === "number" ? data.totalGames : null;
+          typeof data.totalGames === "number" &&
+          !Number.isNaN(data.totalGames)
+            ? data.totalGames
+            : null;
 
         let text = "";
-
         if (best != null && total != null) {
           text = `Rekord: ${best} • Rozegrane: ${total}`;
         } else if (best != null) {
@@ -295,75 +356,18 @@
       })
       .catch((err) => {
         console.error("[arcade] Błąd ładowania statystyk dla", gameId, err);
-        const statEls = document.querySelectorAll(
-          `.game-stats[data-game-stats="${gameId}"]`
-        );
         statEls.forEach((el) => {
           el.textContent = "Statystyki chwilowo niedostępne.";
         });
       });
   }
 
-  // ------------------------------
-  // Powrót do listy kategorii
-  // ------------------------------
-
-  function setupBackButton() {
-    const backBtn = $(BACK_BTN_SELECTOR);
-    const gamesSection = $(GAMES_SECTION_SELECTOR);
-
-    if (!backBtn || !gamesSection) return;
-
-    backBtn.addEventListener("click", function () {
-      gamesSection.hidden = true;
-      clearError();
-
-      const tabs = document.querySelectorAll(".category-tab");
-      tabs.forEach((t) => t.classList.remove("active"));
-    });
-  }
-
-  // ------------------------------
+  // --------------------------------------------------
   // Inicjalizacja
-  // ------------------------------
+  // --------------------------------------------------
 
   document.addEventListener("DOMContentLoaded", function () {
-    setupBackButton();
+    initWallet();
     loadCategories();
-    
-  const walletEl = document.getElementById("arcade-wallet");
-  const balanceEl = document.getElementById("arcade-wallet-balance");
-  const guestHintEl = document.getElementById("arcade-wallet-guest-hint");
-
-  if (!walletEl || !balanceEl || !window.supabase) {
-    return;
-  }
-
-  // sprawdzamy, czy użytkownik jest zalogowany
-  window.supabase.auth.getUser().then(function ({ data, error }) {
-    const user = data && data.user;
-    if (error || !user) {
-      // GOŚĆ: nie pokazujemy liczby, tylko podpowiedź
-      balanceEl.style.display = "none";
-      if (guestHintEl) {
-        guestHintEl.hidden = false;
-      }
-      return;
-    }
-
-    // ZALOGOWANY: pokazujemy liczbę monet
-    balanceEl.style.display = "";
-    if (guestHintEl) {
-      guestHintEl.hidden = true;
-    }
-
-    if (window.ArcadeCoins && ArcadeCoins.load) {
-      ArcadeCoins.load().then(function (balance) {
-        balanceEl.textContent = balance.toString();
-      });
-    } else {
-      balanceEl.textContent = "0";
-    }
   });
-});
-
+})();
