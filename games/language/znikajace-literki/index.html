@@ -38,49 +38,64 @@
           <div>
             <h1 class="game-title">Znikające literki</h1>
             <p class="game-subtitle">
-              Zapamiętaj słówko, a potem uzupełnij znikające literki z klawiatury
-              na dole. Kolejne światy odblokowują się, gdy zrobisz postęp.
+              Zapamiętaj słówko, poczekaj aż znikną literki i uzupełnij je z
+              klawiatury na dole. Odblokowuj kolejne światy.
             </p>
           </div>
 
-          <div class="score-panel">
-            <div class="score-box">
-              <span class="score-label">Najwyższy świat</span>
-              <span id="highest-level" class="score-value">1</span>
+          <div class="top-stats">
+            <div class="score-panel">
+              <div class="score-box">
+                <span class="score-label">Najwyższy świat</span>
+                <span id="highest-level" class="score-value">1</span>
+              </div>
+              <div class="score-box">
+                <span class="score-label">Słówka razem</span>
+                <span id="total-solved" class="score-value">0</span>
+              </div>
+              <div class="score-box">
+                <span class="score-label">Najlepsza seria</span>
+                <span id="best-streak" class="score-value">0</span>
+              </div>
             </div>
-            <div class="score-box">
-              <span class="score-label">Słówka razem</span>
-              <span id="total-solved" class="score-value">0</span>
-            </div>
-            <div class="score-box">
-              <span class="score-label">Najlepsza seria</span>
-              <span id="best-streak" class="score-value">0</span>
-            </div>
-          </div>
 
-          <div class="score-panel">
-            <button id="new-game-btn" class="btn-primary">Nowa gra</button>
-            <button id="save-game-btn" class="btn-primary">Zapisz</button>
-            <button id="reset-record-btn" class="btn-primary">
-              Resetuj rekord
-            </button>
+            <div class="controls-panel">
+              <button id="new-game-btn" class="btn-primary arcade-btn">
+                Nowa gra
+              </button>
+              <button id="save-game-btn" class="btn-primary arcade-btn">
+                Zapisz
+              </button>
+              <button
+                id="reset-record-btn"
+                class="btn-primary arcade-btn btn-ghost"
+              >
+                Resetuj rekord
+              </button>
+            </div>
           </div>
         </header>
 
-        <main class="game-main">
-          <section class="levels-section">
+        <!-- ŚWIATY NAD GRĄ -->
+        <section class="levels-strip">
+          <div class="levels-strip-header">
             <h2 class="section-title">Światy</h2>
             <p class="section-subtitle">
-              Kliknij kółko, aby wybrać świat. Z czasem pojawiają się nowe.
+              Kliknij kółko, żeby zmienić świat. Kolejne odblokujesz, gdy
+              zrobisz postęp.
             </p>
-            <div id="level-list" class="level-list"></div>
-          </section>
+          </div>
+          <div id="level-list" class="level-list level-list--row"></div>
+        </section>
 
+        <!-- GŁÓWNY OBSZAR GRY -->
+        <main class="game-main">
           <section class="play-section">
-            <h2 class="section-title">Runda</h2>
-
             <div class="round-info">
-              <span>Wybrany świat: <strong id="current-level-label">1</strong></span>
+              <span>
+                Świat:
+                <strong id="current-level-label">1</strong>
+              </span>
               <span>
                 Ukończone w tym świecie:
                 <strong id="level-solved">0</strong>/<span
@@ -94,6 +109,7 @@
               <div class="word-display">
                 <div class="word-label">Zapamiętaj słowo:</div>
                 <div id="word-original" class="word-original">---</div>
+
                 <div class="word-label word-label--after">
                   Uzupełnij brakujące literki:
                 </div>
@@ -112,9 +128,9 @@
         </main>
 
         <footer class="game-info">
-          Wskazówka: na niższych światach znikają pojedyncze literki, a klawiatura
-          pokazuje tylko poprawne odpowiedzi. Na wyższych światach pojawiają się
-          mylące literki i dłuższe słowa.
+          Na niższych światach słowo jest proste i widać je dłużej. Na wyższych:
+          znikają więcej literki, jest więcej mylących klawiszy i dłuższe
+          słowa.
         </footer>
       </div>
     </div>
