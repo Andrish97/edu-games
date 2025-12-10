@@ -2,8 +2,9 @@
 // Prosty system monet Neon Arcade (Supabase + tabela arcade_wallets)
 //
 // Wymagania:
+//
 // - globalny klient Supabase w window.supabase (konfigurowany w auth.js)
-// - tabela:
+// - tabela w Supabase:
 //
 //   create table arcade_wallets (
 //     user_id uuid primary key references auth.users(id),
@@ -17,7 +18,8 @@
 //   ArcadeCoins.addForGame(gameId, amount, meta?): Promise<number|null>
 
 (function () {
-  const globalObj = (typeof window !== "undefined" ? window : globalThis) || {};
+  const globalObj =
+    (typeof window !== "undefined" ? window : globalThis) || {};
   const ArcadeCoins = {};
   globalObj.ArcadeCoins = ArcadeCoins;
 
@@ -97,16 +99,14 @@
           .single()
           .then(({ data, error }) => {
             if (error) {
-              // PGRST116 = no rows
+              // PGRST116 = brak wiersza (no rows)
               if (error.code === "PGRST116") {
                 _balance = 0;
-                // próbujemy zainicjować portfel w tle
+                // spróbuj założyć portfel w tle
                 client
                   .from("arcade_wallets")
                   .insert({ user_id: userId, coins: 0 })
-                  .then(() => {
-                    // ok
-                  })
+                  .then(() => {})
                   .catch((e) => {
                     console.warn(
                       "[ArcadeCoins] insert wallet failed (może już istnieje):",
@@ -154,7 +154,6 @@
     const n = Math.floor(Number(amount) || 0);
     if (n <= 0) return Promise.resolve(_balance);
 
-    // najpierw upewniamy się, że znamy usera i saldo
     return ArcadeCoins.load().then((currentBalance) => {
       if (_isGuest || !_userId) {
         console.warn(
@@ -166,7 +165,6 @@
       const newBalance = (currentBalance || 0) + n;
       _balance = newBalance;
 
-      // upsert portfela
       return client
         .from("arcade_wallets")
         .upsert(
@@ -187,9 +185,8 @@
             _balance = data.coins;
           }
 
-          // (opcjonalnie) można tu logować event do osobnej tabeli:
+          // tu można kiedyś dopisać logowanie eventów do
           // arcade_coin_events (user_id, game_id, delta, meta, created_at)
-          // ale na razie zostawiamy to jako TODO.
 
           return _balance;
         })
