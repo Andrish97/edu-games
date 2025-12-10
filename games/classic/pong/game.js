@@ -55,8 +55,9 @@ let isPaused = false;
 // Wczytana sesja (stan gry) – używamy po loadProgress()
 let loadedSession = null;
 
-// Monety w tej sesji (informacyjnie / do ewentualnego wyświetlenia)
+// Monety w tej sesji (informacyjnie / limitowanie)
 let sessionCoins = 0;
+const MAX_SESSION_COINS = 50;
 
 /* ============================
    Helpery
@@ -74,25 +75,85 @@ function getEl(id) {
 }
 
 /* ============================
-   Monety – ArcadeCoins
+   Monety — ArcadeCoins
 ============================ */
 
 function awardCoins(amount, reason) {
   const n = Math.floor(amount);
   if (n <= 0) return;
 
-  // akumulacja w sesji (np. pod debug / przyszły UI)
-  sessionCoins += n;
+  // limit na sesję
+  const remaining = MAX_SESSION_COINS - sessionCoins;
+  if (remaining <= 0) return;
+
+  const toAdd = Math.min(n, remaining);
+  if (toAdd <= 0) return;
+
+  sessionCoins += toAdd;
 
   if (!window.ArcadeCoins || !ArcadeCoins.addForGame) {
-    console.warn("[GAME]", GAME_ID, "Brak ArcadeCoins.addForGame – monety tylko lokalnie:", n, reason);
+    console.warn(
+      "[GAME]",
+      GAME_ID,
+      "Brak ArcadeCoins.addForGame – monety tylko lokalnie:",
+      toAdd,
+      reason
+    );
     return;
   }
 
   try {
-    ArcadeCoins.addForGame(GAME_ID, n, { reason: reason || null });
+    const maybePromise = ArcadeCoins.addForGame(GAME_ID, toAdd, { reason });
+
+    // jeśli coins.js zwraca Promise, złapmy błędy i odświeżmy licznik
+    if (maybePromise && typeof maybePromise.then === "function") {
+      maybePromise
+        .then(() => {
+          if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
+            try {
+              ArcadeAuthUI.refreshCoins();
+            } catch (e) {
+              console.warn("[GAME]", GAME_ID, "Błąd ArcadeAuthUI.refreshCoins:", e);
+            }
+          }
+        })
+        .catch(err => {
+          console.error("[GAME]", GAME_ID, "Błąd ArcadeCoins.addForGame:", err);
+        });
+    } else {
+      // wariant synchroniczny
+      if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
+        try {
+          ArcadeAuthUI.refreshCoins();
+        } catch (e) {
+          console.warn("[GAME]", GAME_ID, "Błąd ArcadeAuthUI.refreshCoins:", e);
+        }
+      }
+    }
   } catch (err) {
-    console.error("[GAME]", GAME_ID, "Błąd ArcadeCoins.addForGame:", err);
+    console.error("[GAME]", GAME_ID, "Wyjątek w awardCoins:", err);
+  }
+}
+
+/**
+ * Monety za poprawę rekordu:
+ * - Ściana: 1 moneta za każde przekroczone 10 punktów
+ * - AI:     1 moneta za każde przekroczone 5 punktów
+ * Działa „względem starego rekordu”, więc nie da się farmić na małych poprawkach.
+ */
+function computeCoinsForBestImprovement(mode, prevBest, newBest) {
+  if (newBest <= prevBest) return 0;
+
+  if (mode === MODE_WALL) {
+    return Math.max(
+      0,
+      Math.floor(newBest / 10) - Math.floor(prevBest / 10)
+    );
+  } else {
+    return Math.max(
+      0,
+      Math.floor(newBest / 5) - Math.floor(prevBest / 5)
+    );
   }
 }
 
@@ -555,14 +616,19 @@ function handlePhysicsAndScoring() {
     if (currentMode === MODE_WALL) {
       playerScore++;
 
-      // sprawdzamy, czy to nowy rekord – jeśli tak, przyznajemy monety
       const prevBest = stats[MODE_WALL].bestScore;
       if (playerScore > prevBest) {
         stats[MODE_WALL].bestScore = playerScore;
         hasUnsavedChanges = true;
 
-        const diff = playerScore - prevBest;
-        awardCoins(diff, "Nowy rekord w trybie Ściana");
+        const coins = computeCoinsForBestImprovement(
+          MODE_WALL,
+          prevBest,
+          playerScore
+        );
+        if (coins > 0) {
+          awardCoins(coins, "new_best_wall");
+        }
       }
 
       updateScoreUI();
@@ -610,8 +676,14 @@ function handlePhysicsAndScoring() {
       if (playerScore > prevBestAI) {
         stats[MODE_AI].bestScore = playerScore;
 
-        const diff = playerScore - prevBestAI;
-        awardCoins(diff, "Nowy rekord w trybie Pojedynek z AI");
+        const coins = computeCoinsForBestImprovement(
+          MODE_AI,
+          prevBestAI,
+          playerScore
+        );
+        if (coins > 0) {
+          awardCoins(coins, "new_best_ai");
+        }
       }
 
       updateScoreUI();
