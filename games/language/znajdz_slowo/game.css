@@ -326,7 +326,7 @@ button#next:active {
     font-size: 48px;
   }
 
-  .btn-hint {
+.btn-hint {
   padding: 6px 14px;
   border-radius: 999px;
   border: none;
