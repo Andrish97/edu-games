@@ -331,12 +331,39 @@
     setupBackButton();
     loadCategories();
     
-  if (window.ArcadeCoins && ArcadeCoins.load) {
-    ArcadeCoins.load().then(function (balance) {
-      const el = document.getElementById("arcade-wallet-balance");
-      if (el) {
-        el.textContent = balance.toString();
-      }
-    });
+  const walletEl = document.getElementById("arcade-wallet");
+  const balanceEl = document.getElementById("arcade-wallet-balance");
+  const guestHintEl = document.getElementById("arcade-wallet-guest-hint");
+
+  if (!walletEl || !balanceEl || !window.supabase) {
+    return;
   }
+
+  // sprawdzamy, czy użytkownik jest zalogowany
+  window.supabase.auth.getUser().then(function ({ data, error }) {
+    const user = data && data.user;
+    if (error || !user) {
+      // GOŚĆ: nie pokazujemy liczby, tylko podpowiedź
+      balanceEl.style.display = "none";
+      if (guestHintEl) {
+        guestHintEl.hidden = false;
+      }
+      return;
+    }
+
+    // ZALOGOWANY: pokazujemy liczbę monet
+    balanceEl.style.display = "";
+    if (guestHintEl) {
+      guestHintEl.hidden = true;
+    }
+
+    if (window.ArcadeCoins && ArcadeCoins.load) {
+      ArcadeCoins.load().then(function (balance) {
+        balanceEl.textContent = balance.toString();
+      });
+    } else {
+      balanceEl.textContent = "0";
+    }
+  });
 });
+
