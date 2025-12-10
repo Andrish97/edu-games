@@ -1,6 +1,20 @@
-/* KARTA GRY – osadzona w Neon Arcade */
+.game-root {
+  min-height: calc(100vh - 64px); /* trochę miejsca na pasek logowania */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
 
-.arcade-game-page .card.game-root {
+.znajdz-slowo-screen {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* KARTA */
+
+.znajdz-slowo-card {
   padding: 20px 22px 22px;
   border-radius: 16px;
   background: rgba(15, 23, 42, 0.96);
@@ -9,126 +23,43 @@
     0 0 0 1px rgba(148, 163, 184, 0.12);
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   min-width: 320px;
-  max-width: 520px;
+  max-width: 480px;
   backdrop-filter: blur(8px);
 }
 
-/* NAGŁÓWEK */
+/* TYTUŁ */
 
-.game-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.9rem;
-  align-items: flex-start;
-  margin-bottom: 0.9rem;
-}
-
-.game-title {
-  font-size: 1.1rem;
+.title {
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #e5e7eb;
-  margin: 0 0 4px 0;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
-.game-subtitle {
-  margin: 0;
-  opacity: 0.85;
-  font-size: 0.85rem;
-}
-
-/* PANEL WYNIKÓW */
-
-.score-panel {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.score-panel--controls {
-  justify-content: flex-end;
-}
-
-.score-box {
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.9);
-  display: flex;
-  flex-direction: column;
-  min-width: 90px;
-}
-
-.score-label {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  opacity: 0.7;
-}
-
-.score-value {
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-/* Przyciski główne – neonowe */
-
-.btn-primary {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 500;
-  white-space: nowrap;
-
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #052e16;
-  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.45);
-  transition:
-    transform 0.06s ease,
-    box-shadow 0.06s ease,
-    filter 0.08s;
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(22, 163, 74, 0.6);
-  filter: brightness(1.05);
-}
-
-.btn-primary:active {
-  transform: translateY(0px) scale(0.98);
-  box-shadow: 0 6px 14px rgba(22, 163, 74, 0.45);
-  filter: brightness(0.97);
-}
-
-/* ŚWIATY */
+/* ŚWIATY – tylko emotki */
 
 .worlds-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   width: 100%;
 }
 
-/* 🔴 Przyciski światów – małe okrągłe emotki */
 .world-btn {
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  padding: 0;
+  width: 26px;
+  height: 26px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.6);
   background: rgba(15, 23, 42, 0.9);
   color: #e5e7eb;
   cursor: pointer;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -140,14 +71,6 @@
     border-color 0.08s,
     opacity 0.1s;
 }
-
-/* Ikonka świata – sama emotka */
-.world-btn .world-icon {
-  font-size: 20px;
-  line-height: 1;
-}
-
-/* Stany jak wcześniej */
 
 .world-btn.active {
   background: linear-gradient(135deg, #22c55e, #16a34a);
@@ -167,7 +90,7 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.95);
 }
 
-/* GÓRNA LINIA: NAZWA ŚWIATA + SERIA */
+/* GÓRNA LINIA */
 
 .top-row {
   display: flex;
@@ -183,11 +106,11 @@
   font-weight: 500;
 }
 
-.streak-highlight {
+.streak-info.streak-highlight {
   color: #4ade80;
 }
 
-/* PROGRES W ŚWIECIE */
+/* PROGRES */
 
 .progress-wrapper {
   width: 100%;
@@ -207,18 +130,23 @@
   transition: width 0.25s ease;
 }
 
-/* EMOJI / OBRAZEK */
+/* EMOJI */
 
 .emoji-box {
   width: 120px;
   height: 120px;
   border-radius: 24px;
-  background: radial-gradient(circle at 30% 20%, #facc15, #f97316 45%, #7c2d12 100%);
+  background: radial-gradient(
+    circle at 30% 20%,
+    #facc15,
+    #f97316 45%,
+    #7c2d12 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 64px;
-  margin: 0 auto 16px auto;
+  margin-bottom: 16px;
   box-shadow:
     0 18px 35px rgba(0, 0, 0, 0.85),
     0 0 0 1px rgba(248, 250, 252, 0.06);
@@ -292,18 +220,28 @@
   opacity: 0.65;
 }
 
-/* TRZĘSIENIE KARTY PRZY BŁĘDZIE */
+/* SHAKE */
 
 .shake {
   animation: shake 0.25s;
 }
 
 @keyframes shake {
-  0% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  50% { transform: translateX(4px); }
-  75% { transform: translateX(-3px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 /* DÓŁ KARTY */
@@ -318,6 +256,12 @@
   font-size: 13px;
 }
 
+#score {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #e5e7eb;
+}
+
 #message {
   margin-top: 6px;
   min-height: 24px;
@@ -326,60 +270,63 @@
   text-align: center;
 }
 
+/* PRZYCISKI */
+
+button#next {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #052e16;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.45);
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.06s ease,
+    filter 0.08s;
+}
+
+button#next:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(22, 163, 74, 0.6);
+  filter: brightness(1.05);
+}
+
+button#next:active {
+  transform: translateY(0px) scale(0.98);
+  box-shadow: 0 6px 14px rgba(22, 163, 74, 0.45);
+  filter: brightness(0.97);
+}
+
+.reset-progress-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.45);
+}
+
 /* RWD */
 
-@media (max-width: 640px) {
-  .arcade-game-page .card.game-root {
+@media (max-width: 480px) {
+  .znajdz-slowo-card {
     min-width: 0;
-    padding: 1.1rem 1.1rem 1rem;
-  }
-
-  .game-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .score-panel--controls {
-    justify-content: flex-start;
+    width: 100%;
   }
 
   .emoji-box {
     width: 96px;
     height: 96px;
-    font-size: 52px;
-  }
-}
-
-@media (max-height: 720px) {
-  .arcade-game-page .card.game-root {
-    padding: 1rem 1.2rem 0.9rem;
-  }
-
-  .game-title {
-    font-size: 1rem;
-  }
-
-  .game-subtitle {
-    font-size: 0.8rem;
+    font-size: 48px;
   }
 
   .choice-btn {
-    font-size: 0.9rem;
+    font-size: 14px;
   }
-
-  .bottom-row {
-    font-size: 0.8rem;
-  }
-}
-/* Override dla tej konkretnej gry – jeśli karta jest wyższa niż ekran, pozwól przewijać */
-.arcade-game-page {
-  max-height: none;
-  overflow-y: auto;
-}
-
-/* Żeby karta zaczynała się bardziej od góry, a nie idealnie na środku */
-.arcade-game-page .shell {
-  align-items: flex-start;
-  padding-top: 1rem;
-  padding-bottom: 1.5rem;
 }
