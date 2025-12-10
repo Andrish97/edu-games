@@ -33,11 +33,19 @@ let saveGameBtn;
 let resetRecordBtn;
 
 // Prędkość
-const initialSpeed = 220; // wolny start
+const initialSpeed = 220;
 const minSpeed = 60;
 const speedStep = 10;
 
-function initGame() {
+// Sterowanie dotykowe (swipe)
+let touchStartX = null;
+let touchStartY = null;
+let touchStartTime = 0;
+
+const SWIPE_THRESHOLD = 24; // minimalna odległość w px
+const SWIPE_TIME_MAX = 600; // ms
+
+async function initGame() {
   canvas = document.getElementById("game-canvas");
   ctx = canvas.getContext("2d");
 
@@ -54,29 +62,37 @@ function initGame() {
   resetRecordBtn = document.getElementById("reset-record-btn");
 
   attachEvents();
+  setupTouchControls();
 
-  loadProgress().then(function () {
-    // Jeśli nie było zapisanego gameState, odpalamy nową grę
-    if (!LAST_SAVE_DATA || !LAST_SAVE_DATA.gameState) {
-      startNewGame();
-    } else {
-      // Był zapis – odtwórz stan dokładnie jak był, w pauzie
-      restoreGameState(LAST_SAVE_DATA.gameState);
-      isPaused = true;
-      updateHud();
-      draw();
-      updatePauseButtonLabel();
+  // Załaduj stan monet (o ile system istnieje)
+  if (window.ArcadeCoins && ArcadeCoins.load) {
+    try {
+      await ArcadeCoins.load();
+    } catch (err) {
+      console.warn("[GAME]", GAME_ID, "Błąd ArcadeCoins.load:", err);
     }
+  }
 
-    setupBeforeUnloadGuard();
-    setupClickGuard();
+  await loadProgress();
 
-    if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
-      ArcadeUI.addBackToArcadeButton({
-        backUrl: "../../../arcade.html",
-      });
-    }
-  });
+  if (!LAST_SAVE_DATA || !LAST_SAVE_DATA.gameState) {
+    startNewGame();
+  } else {
+    restoreGameState(LAST_SAVE_DATA.gameState);
+    isPaused = true;
+    updateHud();
+    draw();
+    updatePauseButtonLabel();
+  }
+
+  setupBeforeUnloadGuard();
+  setupClickGuard();
+
+  if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
+    ArcadeUI.addBackToArcadeButton({
+      backUrl: "../../../arcade.html",
+    });
+  }
 }
 
 /* ======================
@@ -184,7 +200,6 @@ function attachEvents() {
   if (pauseBtn) {
     pauseBtn.addEventListener("click", function () {
       if (isGameOver) return;
-
       setPauseState(!isPaused);
     });
   }
@@ -231,11 +246,9 @@ function handleKeyDown(e) {
   }
 
   if (isPaused || isGameOver) {
-    // Nie zmieniamy kierunku, jeśli pauza lub koniec gry
     return;
   }
 
-  // zmiana kierunku
   if (key === "ArrowUp" && direction.y !== 1) {
     nextDirection = { x: 0, y: -1 };
   } else if (key === "ArrowDown" && direction.y !== -1) {
@@ -263,6 +276,90 @@ function updatePauseButtonLabel() {
 
   pauseBtn.disabled = false;
   pauseBtn.textContent = isPaused ? "Wznów" : "Pauza";
+}
+
+/* ======================
+   Sterowanie dotykowe – swipe
+   ====================== */
+
+function setupTouchControls() {
+  if (!canvas) return;
+
+  canvas.addEventListener(
+    "touchstart",
+    function (e) {
+      if (!e.touches || e.touches.length === 0) return;
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = Date.now();
+    },
+    { passive: true }
+  );
+
+  canvas.addEventListener(
+    "touchmove",
+    function (e) {
+      // blokujemy przewijanie strony, gdy gramy
+      e.preventDefault();
+    },
+    { passive: false }
+  );
+
+  canvas.addEventListener(
+    "touchend",
+    function (e) {
+      if (touchStartX === null || touchStartY === null) return;
+
+      const t =
+        (e.changedTouches && e.changedTouches[0]) ||
+        (e.touches && e.touches[0]);
+      if (!t) {
+        resetTouch();
+        return;
+      }
+
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      const dt = Date.now() - touchStartTime;
+
+      resetTouch();
+
+      if (dt > SWIPE_TIME_MAX) return;
+
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+
+      if (absX < SWIPE_THRESHOLD && absY < SWIPE_THRESHOLD) {
+        return;
+      }
+
+      if (isPaused || isGameOver) {
+        return;
+      }
+
+      if (absX > absY) {
+        if (dx > 0 && direction.x !== -1) {
+          nextDirection = { x: 1, y: 0 };
+        } else if (dx < 0 && direction.x !== 1) {
+          nextDirection = { x: -1, y: 0 };
+        }
+      } else {
+        if (dy > 0 && direction.y !== -1) {
+          nextDirection = { x: 0, y: 1 };
+        } else if (dy < 0 && direction.y !== 1) {
+          nextDirection = { x: 0, y: -1 };
+        }
+      }
+    },
+    { passive: false }
+  );
+}
+
+function resetTouch() {
+  touchStartX = null;
+  touchStartY = null;
+  touchStartTime = 0;
 }
 
 /* ======================
@@ -307,12 +404,10 @@ function startLoop() {
 function tick() {
   if (isPaused || isGameOver) return;
 
-  // mamy niezapisany stan od pierwszego ruchu
   hasUnsavedChanges = true;
 
   direction = nextDirection;
 
-  // Nowa głowa
   let head = {
     x: snake[0].x + direction.x,
     y: snake[0].y + direction.y,
@@ -332,7 +427,6 @@ function tick() {
 
   snake.unshift(head);
 
-  // Jedzenie
   if (head.x === food.x && head.y === food.y) {
     score++;
     if (score > bestScore) {
@@ -341,7 +435,7 @@ function tick() {
     updateHud();
 
     speed = Math.max(minSpeed, speed - speedStep);
-    startLoop(); // restartujemy pętlę z nową prędkością
+    startLoop();
 
     placeFood();
   } else {
@@ -366,7 +460,6 @@ function placeFood() {
 }
 
 function restoreGameState(state) {
-  // prosta rekonstrukcja
   snake = state.snake || [
     { x: 8, y: 10 },
     { x: 7, y: 10 },
@@ -379,7 +472,6 @@ function restoreGameState(state) {
   isGameOver = !!state.isGameOver;
   speed = typeof state.speed === "number" ? state.speed : initialSpeed;
 
-  // bezpieczeństwo – tilesX/Y raczej się nie zmieniają, ale jakby co:
   if (typeof state.tilesX === "number") tilesX = state.tilesX;
   if (typeof state.tilesY === "number") tilesY = state.tilesY;
 
@@ -514,7 +606,7 @@ function drawGameOverOverlay() {
 }
 
 /* ======================
-   KONIEC GRY
+   KONIEC GRY + DIAMENTY
    ====================== */
 
 function endGame() {
@@ -526,6 +618,7 @@ function endGame() {
     gameLoop = null;
   }
 
+  const prevBest = bestScore;
   totalGames++;
   if (score > bestScore) {
     bestScore = score;
@@ -534,7 +627,49 @@ function endGame() {
   updateHud();
   hasUnsavedChanges = true;
   updatePauseButtonLabel();
-  draw(); // narysuje też overlay
+  draw();
+
+  // === DIAMENTY 💎 ===
+  // Niech nie będzie zbyt łatwo:
+  // - 1 diament za każde 7 punktów
+  // - +3 diamenty jeśli nowy rekord
+  const newRecord = score > prevBest;
+  let reward = 0;
+
+  if (score >= 5) {
+    reward = Math.floor(score / 7);
+    if (newRecord) {
+      reward += 3;
+    }
+  }
+
+  if (reward > 0 && window.ArcadeCoins && ArcadeCoins.addForGame) {
+    ArcadeCoins.addForGame(GAME_ID, reward, {
+      reason: "game_over",
+      score: score,
+      newRecord: newRecord,
+    })
+      .then(function () {
+        console.log(
+          "[GAME]",
+          GAME_ID,
+          "przyznano diamenty:",
+          reward,
+          "za wynik",
+          score
+        );
+
+        // Odśwież licznik monet w pasku, jeśli jest taki helper
+        if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
+          ArcadeAuthUI.refreshCoins().catch(function (err) {
+            console.warn("[GAME]", GAME_ID, "refreshCoins error:", err);
+          });
+        }
+      })
+      .catch(function (err) {
+        console.error("[GAME]", GAME_ID, "Błąd addForGame:", err);
+      });
+  }
 }
 
 /* ======================
