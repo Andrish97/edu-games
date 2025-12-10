@@ -326,6 +326,31 @@ button#next:active {
     font-size: 48px;
   }
 
+  .btn-hint {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: white;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.45);
+  transition: transform 0.06s ease, box-shadow 0.06s ease, filter 0.08s;
+}
+
+.btn-hint:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(124, 58, 237, 0.6);
+  filter: brightness(1.05);
+}
+
+.btn-hint:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+
   .choice-btn {
     font-size: 14px;
   }
