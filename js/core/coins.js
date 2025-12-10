@@ -1,152 +1,202 @@
 // js/core/coins.js
-
-window.ArcadeCoins = window.ArcadeCoins || {};
+// Prosty system monet Neon Arcade (Supabase + tabela arcade_wallets)
+//
+// Wymagania:
+// - globalny klient Supabase w window.supabase (konfigurowany w auth.js)
+// - tabela:
+//
+//   create table arcade_wallets (
+//     user_id uuid primary key references auth.users(id),
+//     coins integer not null default 0,
+//     updated_at timestamptz not null default now()
+//   );
+//
+// API:
+//   ArcadeCoins.load(): Promise<number|null>
+//   ArcadeCoins.getBalance(): number|null
+//   ArcadeCoins.addForGame(gameId, amount, meta?): Promise<number|null>
 
 (function () {
-  const logPrefix = "[ArcadeCoins]";
-  let _balance = 0;
-  let _loaded = false;
-  let _loadingPromise = null;
+  const globalObj = (typeof window !== "undefined" ? window : globalThis) || {};
+  const ArcadeCoins = {};
+  globalObj.ArcadeCoins = ArcadeCoins;
 
-  function getSupabase() {
-    if (!window.supabase) {
-      console.warn(logPrefix, "Brak window.supabase – sprawdź auth.js");
-      return null;
+  let supabase = null;
+  let _userId = null;
+  let _balance = null;
+  let _isGuest = false;
+  let _hasLoaded = false;
+  let _loadPromise = null;
+
+  function getClient() {
+    if (supabase) return supabase;
+    if (globalObj.supabase) {
+      supabase = globalObj.supabase;
+      return supabase;
     }
-    return window.supabase;
+    console.warn("[ArcadeCoins] Brak klienta Supabase (window.supabase).");
+    return null;
   }
 
-  async function requireUser(supabase) {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    if (!data || !data.user) {
-      throw new Error("Użytkownik nie jest zalogowany");
-    }
-    return data.user;
-  }
+  function ensureUser() {
+    const client = getClient();
+    if (!client) return Promise.resolve(null);
 
-  async function loadInternal() {
-    const supabase = getSupabase();
-    if (!supabase) return 0;
-
-    const user = await requireUser(supabase);
-
-    const { data, error } = await supabase
-      .from("arcade_wallets")
-      .select("coins")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error(logPrefix, "Błąd odczytu:", error);
-      throw error;
-    }
-
-    if (!data) {
-      _balance = 0;
-      _loaded = true;
-      return 0;
-    }
-
-    _balance = data.coins || 0;
-    _loaded = true;
-    return _balance;
-  }
-
-  async function ensureLoaded() {
-    if (_loaded && !_loadingPromise) return _balance;
-    if (_loadingPromise) return _loadingPromise;
-
-    _loadingPromise = loadInternal().finally(() => {
-      _loadingPromise = null;
-    });
-
-    return _loadingPromise;
-  }
-
-  // zapisujemy „absolutny” stan monet — bez funkcji SQL, zwykły upsert
-  async function saveAbsolute(newBalance, meta) {
-    const supabase = getSupabase();
-    if (!supabase) return;
-
-    const user = await requireUser(supabase);
-    const coins = Math.max(0, Math.floor(newBalance));
-
-    const { data, error } = await supabase
-      .from("arcade_wallets")
-      .upsert(
-        {
-          user_id: user.id,
-          coins: coins,
-          updated_at: new Date().toISOString()
-        },
-        {
-          onConflict: "user_id"
+    return client.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("[ArcadeCoins] getUser error:", error);
+          _isGuest = true;
+          _userId = null;
+          return null;
         }
-      )
-      .select("coins")
-      .single();
-
-    if (error) {
-      console.error(logPrefix, "Błąd zapisu:", error);
-      throw error;
-    }
-
-    _balance = data?.coins ?? coins;
-
-    console.log(
-      logPrefix,
-      "ustawiono saldo →",
-      _balance,
-      "meta:",
-      meta || {}
-    );
-
-    return _balance;
+        if (!data || !data.user) {
+          _isGuest = true;
+          _userId = null;
+          return null;
+        }
+        _isGuest = false;
+        _userId = data.user.id;
+        return _userId;
+      })
+      .catch((err) => {
+        console.error("[ArcadeCoins] getUser exception:", err);
+        _isGuest = true;
+        _userId = null;
+        return null;
+      });
   }
 
-  // =======================
-  //  API, z którego korzystają gry
-  // =======================
+  // -----------------------------
+  // Public: load()
+  // -----------------------------
+  ArcadeCoins.load = function () {
+    const client = getClient();
+    if (!client) return Promise.resolve(null);
 
-  /**
-   * Ładuje saldo monet zalogowanego użytkownika.
-   * Zwraca Promise<number>.
-   */
-  ArcadeCoins.load = async function () {
-    try {
-      return await ensureLoaded();
-    } catch (e) {
-      console.warn(logPrefix, "Nie udało się wczytać monet:", e);
-      return 0;
+    if (_hasLoaded && _loadPromise === null) {
+      return Promise.resolve(_balance);
     }
+
+    if (_loadPromise) return _loadPromise;
+
+    _loadPromise = ensureUser()
+      .then((userId) => {
+        if (!userId) {
+          // gość – brak monet na serwerze
+          _balance = null;
+          _hasLoaded = true;
+          return null;
+        }
+
+        return client
+          .from("arcade_wallets")
+          .select("coins")
+          .eq("user_id", userId)
+          .single()
+          .then(({ data, error }) => {
+            if (error) {
+              // PGRST116 = no rows
+              if (error.code === "PGRST116") {
+                _balance = 0;
+                // próbujemy zainicjować portfel w tle
+                client
+                  .from("arcade_wallets")
+                  .insert({ user_id: userId, coins: 0 })
+                  .then(() => {
+                    // ok
+                  })
+                  .catch((e) => {
+                    console.warn(
+                      "[ArcadeCoins] insert wallet failed (może już istnieje):",
+                      e
+                    );
+                  });
+                return _balance;
+              }
+
+              console.error("[ArcadeCoins] select wallet error:", error);
+              _balance = null;
+              return null;
+            }
+
+            if (!data || typeof data.coins !== "number") {
+              _balance = 0;
+            } else {
+              _balance = data.coins;
+            }
+            return _balance;
+          });
+      })
+      .finally(() => {
+        _hasLoaded = true;
+        _loadPromise = null;
+      });
+
+    return _loadPromise;
   };
 
-  /**
-   * Zwraca ostatnio znane saldo (bez czekania na Supabase).
-   */
+  // -----------------------------
+  // Public: getBalance()
+  // -----------------------------
   ArcadeCoins.getBalance = function () {
     return _balance;
   };
 
-  /**
-   * Dodaje monety za konkretną grę.
-   * amount > 0, tylko dla zalogowanych.
-   */
-  ArcadeCoins.addForGame = async function (gameId, amount, extraMeta) {
-    const delta = Math.floor(amount);
-    if (!Number.isFinite(delta) || delta <= 0) return;
+  // -----------------------------
+  // Public: addForGame(gameId, amount, meta?)
+  // -----------------------------
+  ArcadeCoins.addForGame = function (gameId, amount, meta) {
+    const client = getClient();
+    if (!client) return Promise.resolve(_balance);
 
-    try {
-      await ensureLoaded();
-      const newBalance = _balance + delta;
-      return await saveAbsolute(newBalance, {
-        type: "game",
-        gameId: gameId,
-        ...(extraMeta || {})
-      });
-    } catch (e) {
-      console.warn(logPrefix, "Nie udało się dodać monet:", e);
-    }
+    const n = Math.floor(Number(amount) || 0);
+    if (n <= 0) return Promise.resolve(_balance);
+
+    // najpierw upewniamy się, że znamy usera i saldo
+    return ArcadeCoins.load().then((currentBalance) => {
+      if (_isGuest || !_userId) {
+        console.warn(
+          "[ArcadeCoins] Użytkownik niezalogowany – monety nie zostaną zapisane."
+        );
+        return currentBalance;
+      }
+
+      const newBalance = (currentBalance || 0) + n;
+      _balance = newBalance;
+
+      // upsert portfela
+      return client
+        .from("arcade_wallets")
+        .upsert(
+          {
+            user_id: _userId,
+            coins: newBalance,
+          },
+          { onConflict: "user_id" }
+        )
+        .select("coins")
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("[ArcadeCoins] upsert error:", error);
+            return _balance;
+          }
+          if (data && typeof data.coins === "number") {
+            _balance = data.coins;
+          }
+
+          // (opcjonalnie) można tu logować event do osobnej tabeli:
+          // arcade_coin_events (user_id, game_id, delta, meta, created_at)
+          // ale na razie zostawiamy to jako TODO.
+
+          return _balance;
+        })
+        .catch((err) => {
+          console.error("[ArcadeCoins] exception during addForGame:", err);
+          return _balance;
+        });
+    });
   };
 })();
