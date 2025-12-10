@@ -290,4 +290,58 @@
   font-size: 0.7rem;
   opacity: 0.6;
 }
+/* Górna belka z przyciskiem do Pokoju nagród */
+.arcade-top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 12px 0 18px;
+}
+
+/* Neonowy przycisk do room.html */
+.arcade-room-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  background: linear-gradient(135deg, #38bdf8, #a855f7);
+  color: #0b1120;
+  box-shadow:
+    0 0 16px rgba(56, 189, 248, 0.7),
+    0 0 24px rgba(168, 85, 247, 0.6);
+
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    filter 0.08s ease;
+}
+
+.arcade-room-btn .icon {
+  font-size: 15px;
+}
+
+.arcade-room-btn .label {
+  margin-top: 1px;
+}
+
+.arcade-room-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 22px rgba(56, 189, 248, 0.9),
+    0 0 30px rgba(168, 85, 247, 0.9);
+  filter: brightness(1.05);
+}
+
+.arcade-room-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
 
