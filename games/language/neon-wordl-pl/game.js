@@ -3,7 +3,7 @@ const GAME_ID = "neon-wordl-pl";
 const DICT_URL =
   "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/pl/pl_full.txt";
 const MAX_ROWS = 6;
-const HINT_COST = 5; // koszt jednej podpowiedzi w 💎
+const HINT_COST = 5; // koszt jednej podpowiedzi
 
 let allWords = [];
 let validWords = [];
@@ -11,27 +11,21 @@ let usedWords = new Set();
 let secret = "";
 let wordLength = 5;
 
-// Stan planszy
-let board = []; // 2D: [row][col] -> tile element
+let board = [];
 let row = 0;
 let col = 0;
 
-// Stan podpowiedzi
 let usedHintPositions = new Set();
 
-// Statystyki (ArcadeProgress)
 let gamesPlayed = 0;
 let wins = 0;
 let currentStreak = 0;
 let maxStreak = 0;
-let LAST_SAVE_DATA = null;
 
-// Klawiatura
 let keyboardEl;
 let keyboardInnerEl;
-const keyboardState = {}; // litera -> "absent" | "present" | "correct"
+const keyboardState = {};
 
-// DOM
 let statusEl;
 let boardEl;
 let wordLenSel;
@@ -42,24 +36,19 @@ let statWinsEl;
 let statStreakEl;
 let statMaxStreakEl;
 
-// Podpowiedzi / monety
 let hintBtn;
 let hintTextEl;
-let coinsLoaded = false;
 
 // ===== POMOCNICZE =====
 
 function normalizeWord(w) {
-  return w
-    .toLowerCase()
-    .replace(/[^a-ząćęłńóśżź]/g, ""); // tylko litery PL
+  return w.toLowerCase().replace(/[^a-ząćęłńóśżź]/g, "");
 }
 
 function canUseCoins() {
   return (
     typeof window !== "undefined" &&
     window.ArcadeCoins &&
-    typeof ArcadeCoins.load === "function" &&
     typeof ArcadeCoins.getBalance === "function" &&
     typeof ArcadeCoins.addForGame === "function"
   );
@@ -73,14 +62,15 @@ async function loadDictionary() {
     const resp = await fetch(DICT_URL);
     const text = await resp.text();
     const lines = text.split("\n").map((x) => normalizeWord(x.split(" ")[0]));
+
     allWords = [...new Set(lines)].filter(
       (w) => w.length >= 4 && w.length <= 7
     );
-    statusEl.textContent = "Słownik gotowy. Zgaduj!";
+
+    statusEl.textContent = "Słownik załadowany.";
   } catch (err) {
-    console.error("[WORDL] Błąd przy pobieraniu słownika:", err);
-    statusEl.textContent =
-      "Błąd ładowania słownika. Sprawdź połączenie z internetem.";
+    console.error("Błąd ładowania słownika:", err);
+    statusEl.textContent = "Błąd ładowania słownika.";
   }
 }
 
@@ -121,16 +111,20 @@ function initBoardStructure() {
 function resetBoard() {
   row = 0;
   col = 0;
+  usedHintPositions = new Set();
+  if (hintTextEl) hintTextEl.textContent = "";
+
   for (let r = 0; r < MAX_ROWS; r++) {
     for (let c = 0; c < wordLength; c++) {
-      const tile = board[r][c];
-      tile.textContent = "";
-      tile.className = "tile";
+      const t = board[r][c];
+      t.textContent = "";
+      t.className = "tile";
     }
   }
 }
 
 // ===== KLAWIATURA DOTYKOWA =====
+
 const KEYBOARD_LAYOUT = [
   ["w", "e", "r", "t", "y", "u", "i", "o", "p"],
   ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
@@ -148,94 +142,46 @@ function buildKeyboard() {
     const rowDiv = document.createElement("div");
     rowDiv.className = "keyboard-row";
 
-    rowKeys.forEach((key) => {
+    rowKeys.forEach((k) => {
       const btn = document.createElement("button");
       btn.className = "key-btn";
-      btn.dataset.key = key;
+      btn.dataset.key = k;
 
-      if (key === "enter") {
-        btn.textContent = "Enter";
+      if (k === "enter") {
+        btn.textContent = "ENTER";
         btn.classList.add("key-wide");
-      } else if (key === "backspace") {
+      } else if (k === "backspace") {
         btn.textContent = "⌫";
         btn.classList.add("key-wide");
       } else {
-        btn.textContent = key;
+        btn.textContent = k;
       }
 
-      btn.addEventListener("click", () => handleVirtualKey(key));
+      btn.addEventListener("click", () => handleVirtualKey(k));
       rowDiv.appendChild(btn);
     });
 
     keyboardInnerEl.appendChild(rowDiv);
   });
 
-  // czyścimy stan kolorów
   Object.keys(keyboardState).forEach((k) => delete keyboardState[k]);
 }
 
 function handleVirtualKey(k) {
   statusEl.textContent = "";
 
-  if (k === "enter") {
-    submitRow();
-    return;
-  }
-  if (k === "backspace") {
-    erase();
-    return;
-  }
+  if (k === "enter") return submitRow();
+  if (k === "backspace") return erase();
   pressLetter(k);
 }
 
-// ===== STATYSTYKI + AUTO-SAVE =====
+// ===== STATYSTYKI =====
 
 function updateStatsUI() {
-  if (statGamesEl) statGamesEl.textContent = gamesPlayed.toString();
-  if (statWinsEl) statWinsEl.textContent = wins.toString();
-  if (statStreakEl) statStreakEl.textContent = currentStreak.toString();
-  if (statMaxStreakEl) statMaxStreakEl.textContent = maxStreak.toString();
-}
-
-function autoSave() {
-  if (!window.ArcadeProgress || !ArcadeProgress.save) return;
-
-  const payload = {
-    gamesPlayed,
-    wins,
-    currentStreak,
-    maxStreak,
-  };
-
-  ArcadeProgress.save(GAME_ID, payload)
-    .then(() => {
-      LAST_SAVE_DATA = payload;
-      console.log("[WORDL] auto-zapis:", payload);
-    })
-    .catch((err) => {
-      console.error("[WORDL] błąd zapisu:", err);
-    });
-}
-
-function rewardCoinsForGame(win) {
-  if (!canUseCoins()) return;
-
-  const amount = win ? 5 : 1;
-
-  ArcadeCoins.addForGame(GAME_ID, amount, {
-    reason: win ? "win" : "loss",
-    wordLength,
-    secret,
-  })
-    .then(() => {
-      if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
-        ArcadeAuthUI.refreshCoins();
-      }
-      console.log("[WORDL] przyznano monety:", amount);
-    })
-    .catch((err) => {
-      console.warn("[WORDL] błąd przyznawania monet:", err);
-    });
+  if (statGamesEl) statGamesEl.textContent = gamesPlayed;
+  if (statWinsEl) statWinsEl.textContent = wins;
+  if (statStreakEl) statStreakEl.textContent = currentStreak;
+  if (statMaxStreakEl) statMaxStreakEl.textContent = maxStreak;
 }
 
 function registerGameFinished(win) {
@@ -243,95 +189,36 @@ function registerGameFinished(win) {
   if (win) {
     wins++;
     currentStreak++;
-    if (currentStreak > maxStreak) {
-      maxStreak = currentStreak;
-    }
+    if (currentStreak > maxStreak) maxStreak = currentStreak;
   } else {
     currentStreak = 0;
   }
+
   updateStatsUI();
-  autoSave();
-  rewardCoinsForGame(win);
-}
 
-// ===== ArcadeProgress – load / clear =====
-
-function loadProgress() {
-  if (!window.ArcadeProgress || !ArcadeProgress.load) {
-    console.warn("[WORDL]", GAME_ID, "Brak ArcadeProgress.load");
-    return Promise.resolve();
+  // nagrody monet
+  if (canUseCoins()) {
+    ArcadeCoins.addForGame(GAME_ID, win ? 5 : 1, {
+      reason: win ? "win" : "loss",
+      secret,
+    }).then(() => {
+      if (window.ArcadeAuthUI) ArcadeAuthUI.refreshCoins();
+    });
   }
-
-  return ArcadeProgress.load(GAME_ID)
-    .then(function (data) {
-      if (!data) {
-        updateStatsUI();
-        return;
-      }
-
-      if (typeof data.gamesPlayed === "number") gamesPlayed = data.gamesPlayed;
-      if (typeof data.wins === "number") wins = data.wins;
-      if (typeof data.currentStreak === "number")
-        currentStreak = data.currentStreak;
-      if (typeof data.maxStreak === "number") maxStreak = data.maxStreak;
-
-      LAST_SAVE_DATA = data;
-      updateStatsUI();
-    })
-    .catch(function (err) {
-      console.error("[WORDL]", GAME_ID, "Błąd load:", err);
-    });
 }
 
-function clearProgress() {
-  if (!window.ArcadeProgress || !ArcadeProgress.clear) {
-    console.warn("[WORDL]", GAME_ID, "Brak ArcadeProgress.clear");
-    return Promise.resolve();
-  }
-
-  return ArcadeProgress.clear(GAME_ID)
-    .then(function () {
-      LAST_SAVE_DATA = null;
-
-      gamesPlayed = 0;
-      wins = 0;
-      currentStreak = 0;
-      maxStreak = 0;
-      updateStatsUI();
-
-      console.log("[WORDL]", GAME_ID, "progress wyczyszczony");
-      statusEl.textContent = "Rekordy wyczyszczone.";
-    })
-    .catch(function (err) {
-      console.error("[WORDL]", GAME_ID, "Błąd clear:", err);
-      statusEl.textContent = "Błąd czyszczenia rekordów.";
-    });
-}
-
-// ===== MONETY / PODPOWIEDZI =====
-
-function initCoins() {
-  if (!canUseCoins()) return;
-
-  ArcadeCoins.load()
-    .then(() => {
-      coinsLoaded = true;
-    })
-    .catch((err) => {
-      console.warn("[WORDL] błąd ArcadeCoins.load:", err);
-    });
-}
+// ===== PODPOWIEDZI (odejmowanie 5 monet) =====
 
 async function useHint() {
   if (!hintBtn) return;
 
-  if (row >= MAX_ROWS || !secret) {
-    statusEl.textContent = "Najpierw rozpocznij nową grę.";
+  if (!secret) {
+    statusEl.textContent = "Najpierw rozpocznij grę.";
     return;
   }
 
   if (!canUseCoins()) {
-    statusEl.textContent = "Podpowiedzi za diamenty są dostępne tylko dla zalogowanych.";
+    statusEl.textContent = "Podpowiedzi dostępne tylko dla zalogowanych.";
     return;
   }
 
@@ -339,42 +226,26 @@ async function useHint() {
   statusEl.textContent = "";
 
   try {
-    // 1. Pobierz saldo
-    const balance = await ArcadeCoins.getBalance();
+    const bal = ArcadeCoins.getBalance();
 
-    if (typeof balance !== "number") {
-      statusEl.textContent = "Nie udało się pobrać ilości diamentów.";
-      hintBtn.disabled = false;
+    if (bal == null) {
+      statusEl.textContent = "Nie udało się pobrać salda.";
       return;
     }
 
-    if (balance < HINT_COST) {
-      statusEl.textContent = "Za mało diamentów! Potrzebujesz minimum 5.";
-      hintBtn.disabled = false;
+    if (bal < HINT_COST) {
+      statusEl.textContent = "Za mało diamentów.";
       return;
     }
 
-    // 2. Odejmij lokalnie
-    const newBalance = balance - HINT_COST;
-
-    // 3. Zapisz nowe saldo
-    // 🔥 jeżeli masz inną funkcję niż setBalance – podmień tutaj!
-    await ArcadeCoins.setBalance(newBalance);
-
-    // 4. Odśwież UI monet
-    if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
-      ArcadeAuthUI.refreshCoins();
-    }
-
-    // 5. Wygeneruj podpowiedź
+    // znajdź literę do odsłonięcia
     const candidates = [];
     for (let i = 0; i < wordLength; i++) {
       if (!usedHintPositions.has(i)) candidates.push(i);
     }
 
     if (!candidates.length) {
-      statusEl.textContent = "Wykorzystałeś już wszystkie podpowiedzi!";
-      hintBtn.disabled = false;
+      statusEl.textContent = "Brak dostępnych podpowiedzi.";
       return;
     }
 
@@ -383,66 +254,34 @@ async function useHint() {
 
     const letter = secret[pos].toUpperCase();
 
-    if (hintTextEl) {
-      hintTextEl.textContent = `Podpowiedź: litera ${letter} na pozycji ${pos + 1}. (-${HINT_COST}💎)`;
-    }
+    // odejmij monety (teraz działa!)
+    await ArcadeCoins.addForGame(GAME_ID, -HINT_COST, {
+      reason: "hint",
+      letter,
+      position: pos,
+    });
 
-  } catch (err) {
-    console.error("[WORDL] Błąd podpowiedzi:", err);
-    statusEl.textContent = "Nie udało się użyć podpowiedzi.";
+    if (window.ArcadeAuthUI) ArcadeAuthUI.refreshCoins();
+
+    hintTextEl.textContent = `Podpowiedź: miejsce ${pos + 1} = ${letter}. (-${HINT_COST}💎)`;
+
+  } catch (e) {
+    console.error("Błąd podpowiedzi:", e);
+    statusEl.textContent = "Błąd podpowiedzi.";
   } finally {
     hintBtn.disabled = false;
   }
 }
-
-// ===== OBSŁUGA PRZYCISKÓW =====
-
-function attachButtonEvents() {
-  if (newGameBtn) {
-    newGameBtn.addEventListener("click", function () {
-      const ok =
-        row === 0 ||
-        row >= MAX_ROWS ||
-        window.confirm(
-          "Rozpocząć nowe słowo? Aktualna próba zostanie przerwana."
-        );
-      if (!ok) return;
-      startNewGame();
-    });
-  }
-
-  if (resetRecordBtn) {
-    resetRecordBtn.addEventListener("click", function () {
-      const ok = window.confirm(
-        "Na pewno chcesz zresetować rekordy i statystyki dla tej gry?"
-      );
-      if (!ok) return;
-      clearProgress();
-    });
-  }
-
-  if (wordLenSel) {
-    wordLenSel.addEventListener("change", function () {
-      wordLength = parseInt(wordLenSel.value, 10) || 5;
-      startNewGame();
-    });
-  }
-
-  if (hintBtn) {
-    hintBtn.addEventListener("click", () => {
-      useHint();
-    });
-  }
-}
-
-// ===== MECHANIKA WORDLE =====
+// ===== OBSŁUGA WPISYWANIA =====
 
 function pressLetter(ch) {
   if (row >= MAX_ROWS) return;
   if (col >= wordLength) return;
+
   const tile = board[row][col];
   tile.textContent = ch.toUpperCase();
   tile.classList.add("filled");
+
   col++;
 }
 
@@ -455,7 +294,6 @@ function erase() {
   }
 }
 
-// Priorytety kolorów klawiatury (nie psujemy zielonego)
 const KEY_STATE_PRIORITY = {
   absent: 0,
   present: 1,
@@ -463,29 +301,22 @@ const KEY_STATE_PRIORITY = {
 };
 
 function updateKeyColor(letter, newState) {
-  const current = keyboardState[letter];
-  if (
-    current &&
-    KEY_STATE_PRIORITY[newState] <= KEY_STATE_PRIORITY[current]
-  ) {
-    return;
-  }
+  const cur = keyboardState[letter];
+  if (cur && KEY_STATE_PRIORITY[newState] <= KEY_STATE_PRIORITY[cur]) return;
 
   keyboardState[letter] = newState;
 
-  const buttons = keyboardEl.querySelectorAll(".key-btn");
-  buttons.forEach((btn) => {
-    const k = btn.dataset.key;
-    if (k !== letter) return;
-
-    btn.classList.remove("key-correct", "key-present", "key-absent");
-    if (newState === "correct") btn.classList.add("key-correct");
-    if (newState === "present") btn.classList.add("key-present");
-    if (newState === "absent") btn.classList.add("key-absent");
-  });
+  const btns = keyboardEl.querySelectorAll(".key-btn");
+  for (const b of btns) {
+    if (b.dataset.key === letter) {
+      b.classList.remove("key-correct", "key-present", "key-absent");
+      b.classList.add("key-" + newState);
+    }
+  }
 }
 
-// pełna logika Wordle dla duplikatów
+// ===== KOLOROWANIE =====
+
 function colorRow(r) {
   const guess = [];
   for (let c = 0; c < wordLength; c++) {
@@ -493,36 +324,32 @@ function colorRow(r) {
   }
 
   const secretArr = secret.split("");
-
   const counts = {};
-  for (let i = 0; i < wordLength; i++) {
-    const ch = secretArr[i];
+
+  for (const ch of secretArr) {
     counts[ch] = (counts[ch] || 0) + 1;
   }
 
-  // KROK 1 — zielone
+  // zielone
   for (let c = 0; c < wordLength; c++) {
-    const tile = board[r][c];
-    const ch = guess[c];
-
-    if (ch === secretArr[c]) {
-      tile.classList.add("correct");
-      counts[ch]--;
-      updateKeyColor(ch, "correct");
+    if (guess[c] === secretArr[c]) {
+      board[r][c].classList.add("correct");
+      updateKeyColor(guess[c], "correct");
+      counts[guess[c]]--;
     }
   }
 
-  // KROK 2 — żółte / szare
+  // żółte / szare
   for (let c = 0; c < wordLength; c++) {
     const tile = board[r][c];
-    if (tile.classList.contains("correct")) continue;
-
     const ch = guess[c];
+
+    if (tile.classList.contains("correct")) continue;
 
     if (counts[ch] > 0) {
       tile.classList.add("present");
-      counts[ch]--;
       updateKeyColor(ch, "present");
+      counts[ch]--;
     } else {
       tile.classList.add("absent");
       updateKeyColor(ch, "absent");
@@ -543,7 +370,7 @@ function submitRow() {
   }
 
   if (!validWords.includes(guess)) {
-    statusEl.textContent = "Nie ma takiego słowa!";
+    statusEl.textContent = "Nie ma takiego słowa.";
     return;
   }
 
@@ -552,7 +379,7 @@ function submitRow() {
   if (guess === secret) {
     statusEl.textContent = "Brawo! Trafione!";
     registerGameFinished(true);
-    row = MAX_ROWS; // blokada dalszej gry
+    row = MAX_ROWS;
     return;
   }
 
@@ -571,23 +398,16 @@ function submitRow() {
 
 function startNewGame() {
   secret = chooseSecret();
-  usedHintPositions = new Set();
-  if (hintTextEl) hintTextEl.textContent = "";
-
   if (!secret) {
-    statusEl.textContent =
-      "Brak słów o tej długości w słowniku. Zmień długość słowa.";
+    statusEl.textContent = "Brak słów o tej długości.";
     return;
   }
 
   initBoardStructure();
   resetBoard();
   buildKeyboard();
-  statusEl.textContent = "Zgadnij słowo!";
 
-  if (hintBtn) {
-    hintBtn.disabled = !canUseCoins();
-  }
+  statusEl.textContent = "Zgadnij słowo!";
 }
 
 // ===== KLAWIATURA FIZYCZNA =====
@@ -596,24 +416,26 @@ function setupKeyboardListener() {
   document.addEventListener("keydown", (e) => {
     statusEl.textContent = "";
 
-    if (e.key === "Enter") {
-      e.preventDefault();
+    const k = e.key.toLowerCase();
+
+    if (k === "enter") {
       submitRow();
       return;
     }
-    if (e.key === "Backspace") {
-      e.preventDefault();
+
+    if (k === "backspace") {
       erase();
       return;
     }
-    if (/^[a-ząćęłńóśżź]$/i.test(e.key)) {
-      e.preventDefault();
-      pressLetter(e.key.toLowerCase());
+
+    if (/^[a-ząćęłńóśżź]$/i.test(k)) {
+      pressLetter(k);
+      return;
     }
   });
 }
 
-// ===== INICJALIZACJA =====
+// ===== DOM CACHE =====
 
 function cacheDom() {
   statusEl = document.getElementById("status");
@@ -633,25 +455,51 @@ function cacheDom() {
   hintTextEl = document.getElementById("hint-text");
 }
 
+// ===== START =====
+
 function initGame() {
   cacheDom();
+  setupKeyboardListener();
+
+  // przycisk nowej gry
+  if (newGameBtn)
+    newGameBtn.addEventListener("click", () => startNewGame());
+
+  // reset rekordów
+  if (resetRecordBtn)
+    resetRecordBtn.addEventListener("click", () => {
+      gamesPlayed = 0;
+      wins = 0;
+      currentStreak = 0;
+      maxStreak = 0;
+      updateStatsUI();
+      statusEl.textContent = "Rekordy wyczyszczone.";
+    });
+
+  // zmiana długości słowa
+  if (wordLenSel)
+    wordLenSel.addEventListener("change", () => {
+      wordLength = parseInt(wordLenSel.value, 10);
+      startNewGame();
+    });
+
+  // podpowiedź
+  if (hintBtn)
+    hintBtn.addEventListener("click", () => useHint());
+
+  Promise.all([loadDictionary()]).then(() => {
+    startNewGame();
+  });
+
   updateStatsUI();
 
-  setupKeyboardListener();
-  attachButtonEvents();
-
+  // przycisk powrotu (Arcade)
   if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
     ArcadeUI.addBackToArcadeButton({
       backUrl: "../../../arcade.html",
     });
   }
-
-  Promise.all([loadProgress(), loadDictionary()]).then(() => {
-    wordLength = parseInt(wordLenSel.value, 10) || 5;
-    startNewGame();
-  });
-
-  initCoins();
 }
 
 document.addEventListener("DOMContentLoaded", initGame);
+
