@@ -3,7 +3,7 @@ const GAME_ID = "neon-wordl-pl";
 const DICT_URL =
   "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/pl/pl_full.txt";
 const MAX_ROWS = 6;
-const HINT_COST = 5; // koszt jednej podpowiedzi w 💎
+const HINT_COST = 3; // koszt jednej podpowiedzi w 💎
 
 let allWords = [];
 let validWords = [];
@@ -45,7 +45,6 @@ let statMaxStreakEl;
 // Podpowiedzi / monety
 let hintBtn;
 let hintTextEl;
-let coinsBalanceEl;
 let coinsLoaded = false;
 
 // ===== POMOCNICZE =====
@@ -132,15 +131,10 @@ function resetBoard() {
 }
 
 // ===== KLAWIATURA DOTYKOWA =====
-// Twój układ: bez Q/V/X, backspace w 3 rzędzie, enter na końcu.
 const KEYBOARD_LAYOUT = [
-  // rząd 1 – główne spółgłoski
   ["w", "e", "r", "t", "y", "u", "i", "o", "p"],
-  // rząd 2
   ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-  // rząd 3 – z ogonkami i Backspace po prawej
   ["z", "ź", "ż", "c", "b", "n", "m", "backspace"],
-  // rząd 4 – ogonki + Enter na końcu
   ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "enter"],
 ];
 
@@ -153,7 +147,6 @@ function buildKeyboard() {
   KEYBOARD_LAYOUT.forEach((rowKeys) => {
     const rowDiv = document.createElement("div");
     rowDiv.className = "keyboard-row";
-    rowDiv.style.setProperty("--keys", rowKeys.length);
 
     rowKeys.forEach((key) => {
       const btn = document.createElement("button");
@@ -224,11 +217,9 @@ function autoSave() {
     });
 }
 
-// nagroda za grę + odświeżenie monet
 function rewardCoinsForGame(win) {
   if (!canUseCoins()) return;
 
-  // prosta ekonomia: wygrana = 5💎, przegrana = 1💎
   const amount = win ? 5 : 1;
 
   ArcadeCoins.addForGame(GAME_ID, amount, {
@@ -240,7 +231,6 @@ function rewardCoinsForGame(win) {
       if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
         ArcadeAuthUI.refreshCoins();
       }
-      refreshCoinsBalance();
       console.log("[WORDL] przyznano monety:", amount);
     })
     .catch((err) => {
@@ -320,38 +310,17 @@ function clearProgress() {
 
 // ===== MONETY / PODPOWIEDZI =====
 
-function refreshCoinsBalance() {
-  if (!canUseCoins() || !coinsBalanceEl) return;
-
-  ArcadeCoins.getBalance()
-    .then((bal) => {
-      coinsLoaded = true;
-      if (typeof bal === "number") {
-        coinsBalanceEl.textContent = bal.toString();
-      } else {
-        coinsBalanceEl.textContent = "0";
-      }
-    })
-    .catch((err) => {
-      console.warn("[WORDL] błąd pobierania balansu monet:", err);
-      coinsBalanceEl.textContent = "–";
-    });
-}
-
 function initCoins() {
   if (!canUseCoins()) {
-    if (coinsBalanceEl) coinsBalanceEl.textContent = "–";
     return;
   }
 
   ArcadeCoins.load()
     .then(() => {
       coinsLoaded = true;
-      refreshCoinsBalance();
     })
     .catch((err) => {
       console.warn("[WORDL] błąd ArcadeCoins.load:", err);
-      if (coinsBalanceEl) coinsBalanceEl.textContent = "–";
     });
 }
 
@@ -412,7 +381,6 @@ async function useHint() {
     if (window.ArcadeAuthUI && ArcadeAuthUI.refreshCoins) {
       ArcadeAuthUI.refreshCoins();
     }
-    refreshCoinsBalance();
 
     if (hintTextEl) {
       hintTextEl.textContent = `Podpowiedź: na pozycji ${
@@ -527,7 +495,6 @@ function colorRow(r) {
 
   const secretArr = secret.split("");
 
-  // LICZNIK LITER w sekrecie
   const counts = {};
   for (let i = 0; i < wordLength; i++) {
     const ch = secretArr[i];
@@ -620,7 +587,6 @@ function startNewGame() {
   statusEl.textContent = "Zgadnij słowo!";
 
   if (hintBtn) {
-    // na wszelki wypadek włączamy, jeśli monety działają
     hintBtn.disabled = !canUseCoins();
   }
 }
@@ -666,7 +632,6 @@ function cacheDom() {
 
   hintBtn = document.getElementById("hint-btn");
   hintTextEl = document.getElementById("hint-text");
-  coinsBalanceEl = document.getElementById("coins-balance");
 }
 
 function initGame() {
@@ -682,13 +647,11 @@ function initGame() {
     });
   }
 
-  // Ładujemy progres i słownik równolegle, potem start gry
   Promise.all([loadProgress(), loadDictionary()]).then(() => {
     wordLength = parseInt(wordLenSel.value, 10) || 5;
     startNewGame();
   });
 
-  // monety / diamenty
   initCoins();
 }
 
