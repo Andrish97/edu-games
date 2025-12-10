@@ -55,6 +55,9 @@ let isPaused = false;
 // Wczytana sesja (stan gry) – używamy po loadProgress()
 let loadedSession = null;
 
+// Monety w tej sesji (informacyjnie / do ewentualnego wyświetlenia)
+let sessionCoins = 0;
+
 /* ============================
    Helpery
 ============================ */
@@ -68,6 +71,29 @@ function H() {
 
 function getEl(id) {
   return document.getElementById(id);
+}
+
+/* ============================
+   Monety – ArcadeCoins
+============================ */
+
+function awardCoins(amount, reason) {
+  const n = Math.floor(amount);
+  if (n <= 0) return;
+
+  // akumulacja w sesji (np. pod debug / przyszły UI)
+  sessionCoins += n;
+
+  if (!window.ArcadeCoins || !ArcadeCoins.addForGame) {
+    console.warn("[GAME]", GAME_ID, "Brak ArcadeCoins.addForGame – monety tylko lokalnie:", n, reason);
+    return;
+  }
+
+  try {
+    ArcadeCoins.addForGame(GAME_ID, n, { reason: reason || null });
+  } catch (err) {
+    console.error("[GAME]", GAME_ID, "Błąd ArcadeCoins.addForGame:", err);
+  }
 }
 
 /* ============================
@@ -528,10 +554,17 @@ function handlePhysicsAndScoring() {
 
     if (currentMode === MODE_WALL) {
       playerScore++;
-      if (playerScore > stats[MODE_WALL].bestScore) {
+
+      // sprawdzamy, czy to nowy rekord – jeśli tak, przyznajemy monety
+      const prevBest = stats[MODE_WALL].bestScore;
+      if (playerScore > prevBest) {
         stats[MODE_WALL].bestScore = playerScore;
         hasUnsavedChanges = true;
+
+        const diff = playerScore - prevBest;
+        awardCoins(diff, "Nowy rekord w trybie Ściana");
       }
+
       updateScoreUI();
       updateStatsUI();
     } else {
@@ -572,9 +605,15 @@ function handlePhysicsAndScoring() {
     // Punkt dla gracza – piłka ucieka górą
     if (ball.y < 0) {
       playerScore++;
-      if (playerScore > stats[MODE_AI].bestScore) {
+
+      const prevBestAI = stats[MODE_AI].bestScore;
+      if (playerScore > prevBestAI) {
         stats[MODE_AI].bestScore = playerScore;
+
+        const diff = playerScore - prevBestAI;
+        awardCoins(diff, "Nowy rekord w trybie Pojedynek z AI");
       }
+
       updateScoreUI();
       updateStatsUI();
       resetBall(true);
