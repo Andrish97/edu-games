@@ -5,11 +5,15 @@
     <title>Neon Arcade – Pokój</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+    <!-- globalny motyw -->
     <link rel="stylesheet" href="css/theme.css" />
-    <link rel="stylesheet" href="css/room2d.css" />
+    <!-- styl pokoju 2D -->
+    <link rel="stylesheet" href="css/room.css" />
 
+    <!-- supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 
+    <!-- core Neon Arcade -->
     <script src="js/core/auth.js" defer></script>
     <script src="js/core/progress.js" defer></script>
     <script src="js/core/coins.js" defer></script>
@@ -17,6 +21,7 @@
     <script src="js/core/ui.js" defer></script>
     <script src="js/core/room-api.js" defer></script>
 
+    <!-- logika pokoju -->
     <script src="js/pages/room-scene.js" defer></script>
   </head>
   <body>
@@ -24,10 +29,21 @@
 
     <main class="room2d-page">
       <header class="room2d-header">
-        <h1>Twój pokój</h1>
+        <div class="room2d-header-left">
+          <h1 class="room2d-title">Twój pokój</h1>
+          <p class="room2d-subtitle">
+            Ustawiaj meble, trofea i lampy. Przytrzymaj i przeciągnij, żeby zmienić pozycję.
+          </p>
+        </div>
+
         <div class="room2d-header-right">
-          <button id="room-btn-open-shop" class="room2d-btn">Sklep</button>
-          <button id="room-btn-save" class="room2d-btn room2d-btn-secondary">
+          <button id="room-btn-open-shop" class="room2d-btn room2d-btn-secondary">
+            Sklep
+          </button>
+          <button id="room-btn-edit" class="room2d-btn room2d-btn-secondary">
+            Tryb edycji
+          </button>
+          <button id="room-btn-save" class="room2d-btn">
             Zapisz
           </button>
         </div>
@@ -39,7 +55,7 @@
       </section>
 
       <p class="room2d-hint">
-        Przeciągaj przedmioty, aby zmienić pozycję. Niektóre wiszą na ścianie, inne stoją na podłodze, a trofea można stawiać na meblach.
+        W trybie edycji kliknięcie na przedmiot usuwa go z pokoju (pozostaje kupiony w sklepie).
       </p>
     </main>
   </body>
