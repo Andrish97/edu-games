@@ -288,3 +288,103 @@ Supabase przekierowuje użytkownika automatycznie.
 - pasek logowania się nie zmienia — upewnij się, że `auth-bar.js` jest załadowany.
 
 ---
+
+# 🏠 Neon Arcade -- API Pokoju (Room API)
+
+Dokumentacja dla twórców gier\
+**Wersja API: 2.0**
+
+Neon Room to wirtualny pokój gracza, w którym można umieszczać meble,
+dekoracje, trofea oraz przedmioty odblokowywane przez gry.\
+Silnik pokoju jest wspólny dla całej platformy -- każda gra może
+przyznawać nagrody wizualne, które gracz zobaczy później w swoim pokoju.
+
+Ta strona opisuje **jak gra może dodawać nagrody**, **co jest
+zapisywane**, oraz **jak testować działanie**.
+
+## 🔧 1. Integracja gry z API pokoju
+
+Aby gra mogła odblokowywać przedmioty, trzeba dodać do niej jeden plik:
+
+    <script src="../../../js/core/room-api.js" defer></script>
+
+Po załadowaniu możesz używać globalnego obiektu:
+
+    ArcadeRoom
+
+## 🏆 2. Odblokowywanie przedmiotu z poziomu gry
+
+Przykład:
+
+    ArcadeRoom.unlockItemType("trophy_gold", {
+      fromGameId: "moja_gra",
+      meta: { reason: "score_1000" }
+    });
+
+## ✔️ 3. Struktura danych zapisywana do pokoju
+
+    {
+      "version": 2,
+      "unlockedItemTypes": {
+        "trophy_gold": {
+          "unlocked": true,
+          "fromGameId": "moja_gra",
+          "meta": { "reason": "score_1000" }
+        }
+      },
+      "instances": [ ... ]
+    }
+
+## 🎨 4. Jak tworzyć trofea i przedmioty dla pokoju
+
+Każdy przedmiot jest opisany w:
+
+    data/room-items.json
+
+## 💎 5. Połączenie z nagrodami z gry
+
+    ArcadeCoins.addForGame("moja_gra", 10, { reason: "win" });
+    ArcadeAuthUI.refreshCoins();
+
+    ArcadeRoom.unlockItemType("trophy_gold", {
+      fromGameId: "moja_gra",
+      meta: { difficulty: "hard" }
+    });
+
+## 🧪 6. Testowanie
+
+1.  Uruchom grę.
+
+2.  Wywołaj sytuację nagrody.
+
+3.  Sprawdź w konsoli:
+
+        [ArcadeRoom] Odblokowano typ przedmiotu: trophy_gold
+
+4.  Wejdź do `room.html`.
+
+## 🚫 7. Czego gra nie powinna robić
+
+-   Nie tworzy instancji przedmiotów.
+-   Nie zmienia pozycji przedmiotów.
+-   Nie modyfikuje room-items.json.
+
+## 🧩 8. Ściągawka API
+
+    ArcadeRoom.unlockItemType("item_id", {
+      fromGameId: "gra_id",
+      meta: { dowolne_dane }
+    });
+
+## 🎉 10. Przykład integracji
+
+    if (finalScore >= 5000) {
+      ArcadeCoins.addForGame("space_shooter", 12, { reason: "big_win" });
+      ArcadeAuthUI.refreshCoins();
+
+      ArcadeRoom.unlockItemType("trophy_space_crystal", {
+        fromGameId: "space_shooter",
+        meta: { score: finalScore }
+      });
+    }
+
