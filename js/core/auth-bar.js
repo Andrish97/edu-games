@@ -63,7 +63,10 @@
   }
 
   function initPanel(holder) {
-    const backUrl = holder.getAttribute("data-back-url") || "arcade.html";
+  
+    const page = (location.pathname.split("/").pop() || "").toLowerCase();
+    const isArcade = page === "arcade.html";
+    const backUrl = isArcade ? "" : (holder.getAttribute("data-back-url") || "");
     holder.innerHTML = barHTML(backUrl);
 
     const q = (s) => holder.querySelector(s);
