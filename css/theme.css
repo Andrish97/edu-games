@@ -1,7 +1,7 @@
 /* =========================================================
    Neon Arcade — THEME (GLOBAL)
    - tło, typografia, bazowe przyciski
-   - auth-bar (powrót + mobile drawer + compact mobile)
+   - auth-bar (powrót + coins + mobile drawer klikany statusem)
    ========================================================= */
 
 :root {
@@ -23,8 +23,6 @@
   --g-cyan: linear-gradient(135deg, #38bdf8, #0ea5e9);
   --g-pink: linear-gradient(135deg, #ff2cdf, #00f0ff);
   --g-red: linear-gradient(135deg, #ef4444, #b91c1c);
-  --g-gray: linear-gradient(135deg, #6b7280, #4b5563);
-  --g-violet: linear-gradient(135deg, #a855f7, #6366f1);
 }
 
 * { box-sizing: border-box; }
@@ -60,7 +58,7 @@ body.arcade-body {
   backdrop-filter: blur(8px);
 }
 
-/* ====== Bazowe przyciski ====== */
+/* ====== Bazowe przyciski ogólne ====== */
 
 .btn {
   padding: 8px 12px;
@@ -131,38 +129,41 @@ body.arcade-body {
   cursor: pointer;
   white-space: nowrap;
 }
-
 .arcade-back .ico { font-size: 14px; }
-
 .arcade-back .label {
   letter-spacing: .08em;
   text-transform: uppercase;
 }
 
-/* User info */
+/* Status + 💎 jako „chip” (klikalny na mobile) */
 .arcade-user {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(148,163,184,.22);
+  background: rgba(2,6,23,.35);
   color: var(--muted);
+  font-size: 12px;
+  cursor: default;
+  user-select: none;
   white-space: nowrap;
 }
 
 .auth-status {
-  max-width: 40vw;
+  max-width: 42vw;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Jeden licznik 💎 */
 .auth-coins {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(168, 85, 247, 0.4);
-  background: rgba(2, 6, 23, 0.4);
+  background: rgba(2, 6, 23, 0.35);
   font-size: 11px;
   color: var(--text);
 }
@@ -186,7 +187,6 @@ body.arcade-body {
   min-width: 160px;
   outline: none;
 }
-
 .arcade-input:focus {
   border-color: rgba(56,189,248,.9);
   box-shadow: 0 0 0 2px rgba(56,189,248,.2);
@@ -206,7 +206,6 @@ body.arcade-body {
 }
 
 .arcade-btn.logout { background: var(--g-red); color: #12050a; }
-.arcade-btn.guest { background: var(--g-gray); color: #0b1120; }
 
 .auth-forgot {
   background: none;
@@ -228,11 +227,10 @@ body.arcade-body {
 }
 
 /* =========================================================
-   Responsive: MOBILE (<=520px)
-   Wymagania:
-   - w topbarze jedna linia: back + status + 💎
-   - pokazuj TYLKO: Login i Gość (bez zbędnych słów)
-   - Login otwiera drawer z inputami + resztą opcji (register/forgot)
+   MOBILE (<=520px):
+   - status (Gość/Zalogowany) jest klikalny i otwiera panel
+   - domyślnie panel jest zwinięty
+   - po otwarciu: pokazuj login/register/forgot LUB logout (wg logiki w JS/auth.js)
    ========================================================= */
 @media (max-width: 520px) {
   .arcade-topbar-inner {
@@ -244,58 +242,39 @@ body.arcade-body {
   .arcade-back .label { display: none; }
   .arcade-back { padding: 4px 6px; }
 
-  /* GÓRNA LINIA: lewa sekcja zostaje w jednej linii */
+  /* górna linia: back + status/coins w jednej linii */
   .arcade-left {
     width: 100%;
     justify-content: space-between;
   }
 
-  .auth-status { max-width: 52vw; }
+  /* status jest klikalny */
+  .arcade-user {
+    cursor: pointer;
+    color: var(--text);
+    border-color: rgba(148,163,184,.28);
+  }
+  .arcade-user:hover {
+    filter: brightness(1.05);
+  }
 
-  /* Drawer domyślnie zamknięty */
+  /* drawer: domyślnie zamknięty */
   .arcade-auth {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
+    display: none;
     width: 100%;
-    justify-content: flex-end;
-
     border-top: 1px solid var(--stroke);
     padding-top: 8px;
-
-    /* w "zamkniętym" stanie pokażemy tylko login + gość */
-  }
-
-  /* Ukryj wszystko poza Login/Gość kiedy drawer jest zamknięty */
-  .arcade-topbar:not(.drawer-open) .arcade-input,
-  .arcade-topbar:not(.drawer-open) .btn-register,
-  .arcade-topbar:not(.drawer-open) .btn-forgot,
-  .arcade-topbar:not(.drawer-open) .auth-error,
-  .arcade-topbar:not(.drawer-open) .auth-pass2,
-  .arcade-topbar:not(.drawer-open) .auth-logout {
-    display: none !important;
-  }
-
-  /* w zamkniętym stanie: tylko Login + Gość mają sens */
-  .arcade-topbar:not(.drawer-open) .btn-login,
-  .arcade-topbar:not(.drawer-open) .btn-guest {
-    display: inline-flex;
-  }
-
-  /* gdy drawer otwarty: pokaż formularz, ale buttony zostają kompaktowe */
-  .arcade-topbar.drawer-open .arcade-auth {
-    flex-wrap: wrap;
     justify-content: flex-start;
   }
 
-  .arcade-btn {
-    padding: 6px 10px;
-    font-size: 11px;
+  /* drawer otwarty */
+  .arcade-topbar.drawer-open .arcade-auth {
+    display: flex;
   }
 
-  /* gdy user zalogowany: ukryj Login/Gość (to ogarnia JS przez body.auth-logged) */
-  body.auth-logged .btn-login,
-  body.auth-logged .btn-guest {
-    display: none !important;
-  }
+  /* przyciski trochę większe na dotyk */
+  .arcade-btn { padding: 8px 10px; font-size: 11px; }
+
+  /* inputy pełna szerokość */
+  .arcade-input { flex: 1 1 220px; }
 }
