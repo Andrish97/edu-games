@@ -1,0 +1,8 @@
+{
+  "id": "test",
+  "name": "TEST",
+  "description": "Nowy layout",
+  "icon": "Test",
+  "thumb": null,
+  "entry": "index.html"
+}
