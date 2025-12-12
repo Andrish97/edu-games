@@ -1,13 +1,16 @@
-// ===== KONFIGURACJA GRY =====
+// Neon Wordl PL (2025) – ta sama logika, odchudzona integracja z Arcade
+
 const GAME_ID = "neon-wordl-pl";
 const DICT_URL =
   "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/pl/pl_full.txt";
+
 const MAX_ROWS = 6;
-const HINT_COST = 5; // koszt jednej podpowiedzi
+const HINT_COST = 5;
 
 let allWords = [];
 let validWords = [];
 let usedWords = new Set();
+
 let secret = "";
 let wordLength = 5;
 
@@ -16,57 +19,99 @@ let row = 0;
 let col = 0;
 
 let usedHintPositions = new Set();
+const keyboardState = {};
 
 let gamesPlayed = 0;
 let wins = 0;
 let currentStreak = 0;
 let maxStreak = 0;
 
-let keyboardEl;
-let keyboardInnerEl;
-const keyboardState = {};
+let statusEl, hintTextEl, boardEl, wordLenSel;
+let statGamesEl, statWinsEl, statStreakEl, statMaxStreakEl;
+let btnNew, btnReset, hintBtn;
+let controlsSlotEl;
 
-let statusEl;
-let boardEl;
-let wordLenSel;
-let newGameBtn;
-let resetRecordBtn;
-let statGamesEl;
-let statWinsEl;
-let statStreakEl;
-let statMaxStreakEl;
+const KEYBOARD_LAYOUT = [
+  ["w", "e", "r", "t", "y", "u", "i", "o", "p"],
+  ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+  ["z", "ź", "ż", "c", "b", "n", "m", "backspace"],
+  ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "enter"],
+];
 
-let hintBtn;
-let hintTextEl;
-
-// ===== POMOCNICZE =====
+const KEY_STATE_PRIORITY = { absent: 0, present: 1, correct: 2 };
 
 function normalizeWord(w) {
   return w.toLowerCase().replace(/[^a-ząćęłńóśżź]/g, "");
 }
 
-function canUseCoins() {
+function isLoggedInCoinsAvailable() {
   return (
     typeof window !== "undefined" &&
     window.ArcadeCoins &&
-    typeof ArcadeCoins.getBalance === "function" &&
-    typeof ArcadeCoins.addForGame === "function"
+    typeof ArcadeCoins.addForGame === "function" &&
+    typeof ArcadeCoins.getBalance === "function"
   );
 }
 
-// ===== SŁOWNIK =====
+function cacheDom() {
+  statusEl = document.getElementById("status");
+  hintTextEl = document.getElementById("hint-text");
+  boardEl = document.getElementById("board");
+  wordLenSel = document.getElementById("word-len");
+
+  statGamesEl = document.getElementById("stat-games");
+  statWinsEl = document.getElementById("stat-wins");
+  statStreakEl = document.getElementById("stat-streak");
+  statMaxStreakEl = document.getElementById("stat-max-streak");
+
+  btnNew = document.getElementById("btn-new");
+  btnReset = document.getElementById("btn-reset");
+  hintBtn = document.getElementById("hint-btn");
+
+  controlsSlotEl = document.getElementById("controls-slot");
+}
+
+function updateStatsUI() {
+  statGamesEl.textContent = gamesPlayed;
+  statWinsEl.textContent = wins;
+  statStreakEl.textContent = currentStreak;
+  statMaxStreakEl.textContent = maxStreak;
+}
+
+async function loadProgress() {
+  if (!window.ArcadeProgress || typeof ArcadeProgress.load !== "function") return;
+
+  const save = await ArcadeProgress.load(GAME_ID);
+  gamesPlayed = save?.gamesPlayed ?? 0;
+  wins = save?.wins ?? 0;
+  currentStreak = save?.currentStreak ?? 0;
+  maxStreak = save?.maxStreak ?? 0;
+
+  updateStatsUI();
+}
+
+async function saveProgress() {
+  if (!window.ArcadeProgress || typeof ArcadeProgress.save !== "function") return;
+
+  await ArcadeProgress.save(GAME_ID, {
+    gamesPlayed,
+    wins,
+    currentStreak,
+    maxStreak,
+  });
+}
 
 async function loadDictionary() {
   statusEl.textContent = "Pobieram słownik...";
   try {
     const resp = await fetch(DICT_URL);
     const text = await resp.text();
-    const lines = text.split("\n").map((x) => normalizeWord(x.split(" ")[0]));
+    const lines = text
+      .split("\n")
+      .map((x) => normalizeWord(x.split(" ")[0]))
+      .filter(Boolean);
 
-    allWords = [...new Set(lines)].filter(
-      (w) => w.length >= 4 && w.length <= 7
-    );
-
+    allWords = [...new Set(lines)].filter((w) => w.length >= 4 && w.length <= 7);
     statusEl.textContent = "Słownik załadowany.";
   } catch (err) {
     console.error("Błąd ładowania słownika:", err);
@@ -89,8 +134,6 @@ function chooseSecret() {
   return w;
 }
 
-// ===== PLANSZA =====
-
 function initBoardStructure() {
   boardEl.innerHTML = "";
   boardEl.style.gridTemplateColumns = `repeat(${wordLength}, 42px)`;
@@ -112,7 +155,7 @@ function resetBoard() {
   row = 0;
   col = 0;
   usedHintPositions = new Set();
-  if (hintTextEl) hintTextEl.textContent = "";
+  hintTextEl.textContent = "";
 
   for (let r = 0; r < MAX_ROWS; r++) {
     for (let c = 0; c < wordLength; c++) {
@@ -121,22 +164,22 @@ function resetBoard() {
       t.className = "tile";
     }
   }
+
+  // reset kolorów klawiatury
+  for (const k of Object.keys(keyboardState)) delete keyboardState[k];
+  const btns = document.querySelectorAll(".key-btn");
+  btns.forEach((b) => b.classList.remove("key-correct", "key-present", "key-absent"));
 }
 
-// ===== KLAWIATURA DOTYKOWA =====
-
-const KEYBOARD_LAYOUT = [
-  ["w", "e", "r", "t", "y", "u", "i", "o", "p"],
-  ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-  ["z", "ź", "ż", "c", "b", "n", "m", "backspace"],
-  ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "enter"],
-];
-
 function buildKeyboard() {
-  keyboardEl.innerHTML = "";
-  keyboardInnerEl = document.createElement("div");
-  keyboardInnerEl.className = "keyboard-inner";
-  keyboardEl.appendChild(keyboardInnerEl);
+  controlsSlotEl.innerHTML = "";
+
+  const keyboardEl = document.createElement("div");
+  keyboardEl.className = "keyboard";
+
+  const inner = document.createElement("div");
+  inner.className = "keyboard-inner";
+  keyboardEl.appendChild(inner);
 
   KEYBOARD_LAYOUT.forEach((rowKeys) => {
     const rowDiv = document.createElement("div");
@@ -161,144 +204,11 @@ function buildKeyboard() {
       rowDiv.appendChild(btn);
     });
 
-    keyboardInnerEl.appendChild(rowDiv);
+    inner.appendChild(rowDiv);
   });
 
-  Object.keys(keyboardState).forEach((k) => delete keyboardState[k]);
+  controlsSlotEl.appendChild(keyboardEl);
 }
-
-function handleVirtualKey(k) {
-  statusEl.textContent = "";
-
-  if (k === "enter") return submitRow();
-  if (k === "backspace") return erase();
-  pressLetter(k);
-}
-
-// ===== STATYSTYKI =====
-
-function updateStatsUI() {
-  if (statGamesEl) statGamesEl.textContent = gamesPlayed;
-  if (statWinsEl) statWinsEl.textContent = wins;
-  if (statStreakEl) statStreakEl.textContent = currentStreak;
-  if (statMaxStreakEl) statMaxStreakEl.textContent = maxStreak;
-}
-
-function registerGameFinished(win) {
-  gamesPlayed++;
-  if (win) {
-    wins++;
-    currentStreak++;
-    if (currentStreak > maxStreak) maxStreak = currentStreak;
-  } else {
-    currentStreak = 0;
-  }
-
-  updateStatsUI();
-
-  // nagrody monet
-  if (canUseCoins()) {
-    ArcadeCoins.addForGame(GAME_ID, win ? 5 : 1, {
-      reason: win ? "win" : "loss",
-      secret,
-    }).then(() => {
-      if (window.ArcadeAuthUI) ArcadeAuthUI.refreshCoins();
-    });
-  }
-}
-
-// ===== PODPOWIEDZI (odejmowanie 5 monet) =====
-
-async function useHint() {
-  if (!hintBtn) return;
-
-  if (!secret) {
-    statusEl.textContent = "Najpierw rozpocznij grę.";
-    return;
-  }
-
-  if (!canUseCoins()) {
-    statusEl.textContent = "Podpowiedzi dostępne tylko dla zalogowanych.";
-    return;
-  }
-
-  hintBtn.disabled = true;
-  statusEl.textContent = "";
-
-  try {
-    const bal = ArcadeCoins.getBalance();
-
-    if (bal == null) {
-      statusEl.textContent = "Nie udało się pobrać salda.";
-      return;
-    }
-
-    if (bal < HINT_COST) {
-      statusEl.textContent = "Za mało diamentów.";
-      return;
-    }
-
-    // znajdź literę do odsłonięcia
-    const candidates = [];
-    for (let i = 0; i < wordLength; i++) {
-      if (!usedHintPositions.has(i)) candidates.push(i);
-    }
-
-    if (!candidates.length) {
-      statusEl.textContent = "Brak dostępnych podpowiedzi.";
-      return;
-    }
-
-    const pos = candidates[Math.floor(Math.random() * candidates.length)];
-    usedHintPositions.add(pos);
-
-    const letter = secret[pos].toUpperCase();
-
-    // odejmij monety (teraz działa!)
-    await ArcadeCoins.addForGame(GAME_ID, -HINT_COST, {
-      reason: "hint",
-      letter,
-      position: pos,
-    });
-
-    if (window.ArcadeAuthUI) ArcadeAuthUI.refreshCoins();
-
-    hintTextEl.textContent = `Podpowiedź: miejsce ${pos + 1} = ${letter}. (-${HINT_COST}💎)`;
-
-  } catch (e) {
-    console.error("Błąd podpowiedzi:", e);
-    statusEl.textContent = "Błąd podpowiedzi.";
-  } finally {
-    hintBtn.disabled = false;
-  }
-}
-// ===== OBSŁUGA WPISYWANIA =====
-
-function pressLetter(ch) {
-  if (row >= MAX_ROWS) return;
-  if (col >= wordLength) return;
-
-  const tile = board[row][col];
-  tile.textContent = ch.toUpperCase();
-  tile.classList.add("filled");
-
-  col++;
-}
-
-function erase() {
-  if (col > 0) {
-    col--;
-    const tile = board[row][col];
-    tile.textContent = "";
-    tile.classList.remove("filled");
-  }
-}
-
-const KEY_STATE_PRIORITY = {
-  absent: 0,
-  present: 1,
-  correct: 2,
-};
 
 function updateKeyColor(letter, newState) {
   const cur = keyboardState[letter];
@@ -306,7 +216,7 @@ function updateKeyColor(letter, newState) {
 
   keyboardState[letter] = newState;
 
-  const btns = keyboardEl.querySelectorAll(".key-btn");
+  const btns = document.querySelectorAll(".key-btn");
   for (const b of btns) {
     if (b.dataset.key === letter) {
       b.classList.remove("key-correct", "key-present", "key-absent");
@@ -315,7 +225,23 @@ function updateKeyColor(letter, newState) {
   }
 }
 
-// ===== KOLOROWANIE =====
+function pressLetter(ch) {
+  if (row >= MAX_ROWS) return;
+  if (col >= wordLength) return;
+
+  const tile = board[row][col];
+  tile.textContent = ch.toUpperCase();
+  tile.classList.add("filled");
+  col++;
+}
+
+function erase() {
+  if (col <= 0) return;
+  col--;
+  const tile = board[row][col];
+  tile.textContent = "";
+  tile.classList.remove("filled");
+}
 
 function colorRow(r) {
   const guess = [];
@@ -325,10 +251,7 @@ function colorRow(r) {
 
   const secretArr = secret.split("");
   const counts = {};
-
-  for (const ch of secretArr) {
-    counts[ch] = (counts[ch] || 0) + 1;
-  }
+  for (const ch of secretArr) counts[ch] = (counts[ch] || 0) + 1;
 
   // zielone
   for (let c = 0; c < wordLength; c++) {
@@ -357,17 +280,49 @@ function colorRow(r) {
   }
 }
 
+async function registerGameFinished(win) {
+  gamesPlayed++;
+
+  if (win) {
+    wins++;
+    currentStreak++;
+    if (currentStreak > maxStreak) maxStreak = currentStreak;
+  } else {
+    currentStreak = 0;
+  }
+
+  updateStatsUI();
+  await saveProgress();
+
+  // monety: tylko zalogowany
+  if (isLoggedInCoinsAvailable()) {
+    try {
+      // (jeśli coins.js wymaga load — bezpiecznie wywołać)
+      if (typeof ArcadeCoins.load === "function") await ArcadeCoins.load();
+
+      await ArcadeCoins.addForGame(GAME_ID, win ? 5 : 1, {
+        reason: win ? "win" : "loss",
+        secret,
+        length: wordLength,
+      });
+
+      if (window.ArcadeAuthUI?.refreshCoins) await ArcadeAuthUI.refreshCoins();
+    } catch (e) {
+      console.warn("Nie udało się dodać monet:", e);
+    }
+  }
+}
+
 function submitRow() {
   if (row >= MAX_ROWS) return;
+
   if (col < wordLength) {
     statusEl.textContent = "Wpisz pełne słowo.";
     return;
   }
 
   let guess = "";
-  for (let c = 0; c < wordLength; c++) {
-    guess += board[row][c].textContent.toLowerCase();
-  }
+  for (let c = 0; c < wordLength; c++) guess += board[row][c].textContent.toLowerCase();
 
   if (!validWords.includes(guess)) {
     statusEl.textContent = "Nie ma takiego słowa.";
@@ -394,7 +349,87 @@ function submitRow() {
   }
 }
 
-// ===== NOWA GRA =====
+function handleVirtualKey(k) {
+  statusEl.textContent = "";
+
+  if (k === "enter") return submitRow();
+  if (k === "backspace") return erase();
+  pressLetter(k);
+}
+
+function setupKeyboardListener() {
+  document.addEventListener("keydown", (e) => {
+    statusEl.textContent = "";
+
+    const k = e.key.toLowerCase();
+    if (k === "enter") return submitRow();
+    if (k === "backspace") return erase();
+
+    if (/^[a-ząćęłńóśżź]$/i.test(k)) pressLetter(k);
+  });
+}
+
+async function useHint() {
+  if (!secret) {
+    statusEl.textContent = "Najpierw rozpocznij grę.";
+    return;
+  }
+
+  if (!isLoggedInCoinsAvailable()) {
+    statusEl.textContent = "Podpowiedzi są dostępne tylko dla zalogowanych.";
+    return;
+  }
+
+  hintBtn.disabled = true;
+  statusEl.textContent = "";
+
+  try {
+    if (typeof ArcadeCoins.load === "function") await ArcadeCoins.load();
+
+    // getBalance bywa async w nowych implementacjach — obsłuż oba przypadki
+    const balMaybe = ArcadeCoins.getBalance();
+    const bal = balMaybe?.then ? await balMaybe : balMaybe;
+
+    if (bal == null) {
+      statusEl.textContent = "Nie udało się pobrać salda.";
+      return;
+    }
+
+    if (bal < HINT_COST) {
+      statusEl.textContent = "Za mało diamentów.";
+      return;
+    }
+
+    const candidates = [];
+    for (let i = 0; i < wordLength; i++) if (!usedHintPositions.has(i)) candidates.push(i);
+
+    if (!candidates.length) {
+      statusEl.textContent = "Brak dostępnych podpowiedzi.";
+      return;
+    }
+
+    const pos = candidates[Math.floor(Math.random() * candidates.length)];
+    usedHintPositions.add(pos);
+
+    const letter = secret[pos].toUpperCase();
+
+    await ArcadeCoins.addForGame(GAME_ID, -HINT_COST, {
+      reason: "hint",
+      letter,
+      position: pos,
+      length: wordLength,
+    });
+
+    if (window.ArcadeAuthUI?.refreshCoins) await ArcadeAuthUI.refreshCoins();
+
+    hintTextEl.textContent = `Podpowiedź: miejsce ${pos + 1} = ${letter}. (-${HINT_COST}💎)`;
+  } catch (e) {
+    console.error("Błąd podpowiedzi:", e);
+    statusEl.textContent = "Błąd podpowiedzi.";
+  } finally {
+    hintBtn.disabled = false;
+  }
+}
 
 function startNewGame() {
   secret = chooseSecret();
@@ -410,96 +445,32 @@ function startNewGame() {
   statusEl.textContent = "Zgadnij słowo!";
 }
 
-// ===== KLAWIATURA FIZYCZNA =====
-
-function setupKeyboardListener() {
-  document.addEventListener("keydown", (e) => {
-    statusEl.textContent = "";
-
-    const k = e.key.toLowerCase();
-
-    if (k === "enter") {
-      submitRow();
-      return;
-    }
-
-    if (k === "backspace") {
-      erase();
-      return;
-    }
-
-    if (/^[a-ząćęłńóśżź]$/i.test(k)) {
-      pressLetter(k);
-      return;
-    }
-  });
-}
-
-// ===== DOM CACHE =====
-
-function cacheDom() {
-  statusEl = document.getElementById("status");
-  boardEl = document.getElementById("board");
-  wordLenSel = document.getElementById("word-len");
-  keyboardEl = document.getElementById("keyboard");
-
-  newGameBtn = document.getElementById("new-game-btn");
-  resetRecordBtn = document.getElementById("reset-record-btn");
-
-  statGamesEl = document.getElementById("stat-games");
-  statWinsEl = document.getElementById("stat-wins");
-  statStreakEl = document.getElementById("stat-streak");
-  statMaxStreakEl = document.getElementById("stat-max-streak");
-
-  hintBtn = document.getElementById("hint-btn");
-  hintTextEl = document.getElementById("hint-text");
-}
-
-// ===== START =====
-
-function initGame() {
+async function initGame() {
   cacheDom();
   setupKeyboardListener();
 
-  // przycisk nowej gry
-  if (newGameBtn)
-    newGameBtn.addEventListener("click", () => startNewGame());
+  btnNew?.addEventListener("click", startNewGame);
 
-  // reset rekordów
-  if (resetRecordBtn)
-    resetRecordBtn.addEventListener("click", () => {
-      gamesPlayed = 0;
-      wins = 0;
-      currentStreak = 0;
-      maxStreak = 0;
-      updateStatsUI();
-      statusEl.textContent = "Rekordy wyczyszczone.";
-    });
+  btnReset?.addEventListener("click", async () => {
+    gamesPlayed = 0;
+    wins = 0;
+    currentStreak = 0;
+    maxStreak = 0;
+    updateStatsUI();
+    await saveProgress();
+    statusEl.textContent = "Rekordy wyczyszczone.";
+  });
 
-  // zmiana długości słowa
-  if (wordLenSel)
-    wordLenSel.addEventListener("change", () => {
-      wordLength = parseInt(wordLenSel.value, 10);
-      startNewGame();
-    });
-
-  // podpowiedź
-  if (hintBtn)
-    hintBtn.addEventListener("click", () => useHint());
-
-  Promise.all([loadDictionary()]).then(() => {
+  wordLenSel?.addEventListener("change", () => {
+    wordLength = parseInt(wordLenSel.value, 10);
     startNewGame();
   });
 
-  updateStatsUI();
+  hintBtn?.addEventListener("click", useHint);
 
-  // przycisk powrotu (Arcade)
-  if (window.ArcadeUI && ArcadeUI.addBackToArcadeButton) {
-    ArcadeUI.addBackToArcadeButton({
-      backUrl: "../../../arcade.html",
-    });
-  }
+  await loadProgress();
+  await loadDictionary();
+  startNewGame();
 }
 
 document.addEventListener("DOMContentLoaded", initGame);
-
