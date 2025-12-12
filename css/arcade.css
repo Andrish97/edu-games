@@ -1,124 +1,166 @@
 /* css/arcade.css */
-
-/* Layout ogólny arcade */
+/* Neon Arcade – launcher (tabs jak karty przeglądarki + siatka kafelków) */
 
 .arcade-main {
   max-width: 1040px;
   margin: 0 auto;
-  padding: 1.5rem 1rem 2rem;
-}
-
-.arcade-header {
-  margin-bottom: 1.5rem;
-}
-
-.arcade-title {
-  font-size: 1.8rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin: 0 0 0.25rem;
-}
-
-.arcade-subtitle {
-  margin: 0;
-  opacity: 0.8;
-  font-size: 0.9rem;
-}
-
-.arcade-section {
-  margin-top: 1.5rem;
-}
-
-.arcade-section-title {
-  font-size: 1.1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  opacity: 0.9;
-  margin: 0 0 0.75rem;
+  padding: 1.25rem 1rem 2rem;
 }
 
 /* --------------------------------------------------
-   Pasek kategorii jako eleganckie zakładki
+   Header: Neon Arcade + przycisk Pokoju Nagród
+----------------------------------------------------- */
+
+.arcade-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.arcade-title {
+  font-size: 1.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.arcade-room-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  background: linear-gradient(135deg, #38bdf8, #a855f7);
+  color: #0b1120;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow:
+    0 0 16px rgba(56, 189, 248, 0.45),
+    0 0 22px rgba(168, 85, 247, 0.35);
+
+  transition: transform 0.08s ease, filter 0.08s ease;
+}
+
+.arcade-room-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.arcade-room-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.97);
+}
+
+.arcade-room-btn .icon {
+  font-size: 16px;
+}
+
+/* --------------------------------------------------
+   Tabs: jak karty przeglądarki
 ----------------------------------------------------- */
 
 .categories-tabs {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 6px 2px 10px;
   margin-bottom: 12px;
+
+  /* ładny scroll na touch */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .category-tab {
-  padding: 6px 16px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  background: rgba(15, 23, 42, 0.8);
-  color: #e5e7eb;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  position: relative;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease,
-    transform 0.12s ease,
-    box-shadow 0.12s ease;
+  gap: 8px;
+
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.10s ease, filter 0.10s ease, border-color 0.10s ease;
 }
 
 .category-tab:hover {
-  background: rgba(30, 41, 59, 0.95);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.6);
+  filter: brightness(1.06);
+  border-color: rgba(56, 189, 248, 0.45);
 }
 
 .category-tab.active {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  border-color: #22c55e;
-  color: #052e16;
-  font-weight: 600;
-  box-shadow: 0 8px 22px rgba(22, 163, 74, 0.55);
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(34, 197, 94, 0.65);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.55);
+}
+
+.category-tab::after {
+  /* „podcięcie” jak aktywna karta przeglądarki */
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -9px;
+  height: 10px;
+  border-radius: 0 0 12px 12px;
+  background: transparent;
+}
+
+.category-tab.active::after {
+  background: rgba(15, 23, 42, 0.96);
+  border-left: 1px solid rgba(34, 197, 94, 0.25);
+  border-right: 1px solid rgba(34, 197, 94, 0.25);
 }
 
 .category-tab .icon {
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1;
 }
 
-/* Sekcja gier (po kliknięciu kategorii) */
+.category-tab .label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Mobile: jeśli ciasno — chowamy podpisy, zostają ikony */
+@media (max-width: 520px) {
+  .category-tab .label {
+    display: none;
+  }
+  .category-tab {
+    padding: 10px 12px;
+    border-radius: 0; /* bez zaokrągleń */
+  }
+  .categories-tabs {
+    padding-bottom: 8px;
+  }
+}
+
+/* --------------------------------------------------
+   Siatka gier
+----------------------------------------------------- */
 
 .games-section {
-  margin-top: 1.5rem;
+  margin-top: 10px;
 }
-
-.games-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-/* Przycisk powrotu do listy kategorii */
-
-.back-to-categories-btn {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: transparent;
-  color: #e5e7eb;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: 0.12s ease;
-}
-
-.back-to-categories-btn:hover {
-  background: rgba(15, 23, 42, 0.85);
-}
-
-/* Siatka gier – jak wcześniej */
 
 #games {
   display: grid;
@@ -126,38 +168,34 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
-/* Karta gry */
+/* --------------------------------------------------
+   Kafelki gier (klik uruchamia)
+----------------------------------------------------- */
 
 .game-card {
-  border-radius: 14px;
-  background: radial-gradient(circle at top, #020617, #020617);
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(15, 23, 42, 0.8);
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  cursor: pointer;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease,
-    border-color 0.12s ease;
+  display: block;
   text-decoration: none;
   color: inherit;
+
+  border-radius: 14px;
+  background: radial-gradient(circle at top, #020617, #020617);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(15, 23, 42, 0.75);
+
+  padding: 12px;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .game-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.85);
-  border-color: rgba(34, 197, 94, 0.8);
+  border-color: rgba(34, 197, 94, 0.75);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.82);
 }
 
-/* Placeholder „miniaturki” gry – emoji */
-
 .thumb-wrap {
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   background: #020617;
   border: 1px solid rgba(15, 23, 42, 0.9);
@@ -168,18 +206,17 @@
 }
 
 .thumb-placeholder {
-  font-size: 32px;
-  opacity: 0.7;
+  font-size: 34px;
+  opacity: 0.85;
 }
 
-/* Tekst na karcie gry */
-
 .game-headline {
+  margin-top: 10px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 600;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .game-icon {
@@ -187,161 +224,43 @@
 }
 
 .game-name {
-  letter-spacing: 0.04em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
 }
 
-.game-desc {
-  font-size: 12px;
-  color: #9ca3af;
-  min-height: 32px;
-}
-
-/* Statystyki gry */
-
+/* Staty (krótko) – jeśli je wyświetlasz */
 .game-stats {
+  margin-top: 6px;
   font-size: 11px;
   color: #9ca3af;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
-/* Stopka kafelka */
-
-.game-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.pill {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-/* Play button na karcie gry */
-
-.play-btn {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: none;
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #052e16;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 6px 18px rgba(22, 163, 74, 0.55);
-  transition:
-    transform 0.08s ease,
-    box-shadow 0.08s ease,
-    filter 0.08s ease;
-}
-
-.play-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 9px 20px rgba(22, 163, 74, 0.7);
-  filter: brightness(1.05);
-}
-
-.play-btn:active {
-  transform: translateY(0) scale(0.97);
-  box-shadow: 0 5px 14px rgba(22, 163, 74, 0.6);
-  filter: brightness(0.97);
+/* Mobile: launcher bez „kartowości” */
+@media (max-width: 520px) {
+  .game-card {
+    border-radius: 0;
+  }
+  .thumb-wrap {
+    border-radius: 0;
+  }
 }
 
 /* Info / błędy */
 
 .arcade-empty {
-  font-size: 0.9rem;
-  opacity: 0.8;
+  font-size: 0.95rem;
+  opacity: 0.85;
 }
 
 [data-arcade-error] {
   margin-top: 1rem;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: #fecaca;
 }
 
-.auth-bar-coins {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8rem;
+[data-arcade-wait] {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  opacity: 0.85;
 }
-
-.auth-bar-coins-label {
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 0.7rem;
-  opacity: 0.75;
-}
-
-.auth-bar-coins-value {
-  font-weight: 600;
-}
-
-.auth-bar-coins-hint {
-  font-size: 0.7rem;
-  opacity: 0.6;
-}
-/* Górna belka z przyciskiem do Pokoju nagród */
-.arcade-top-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin: 12px 0 18px;
-}
-
-/* Neonowy przycisk do room.html */
-.arcade-room-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-
-  background: linear-gradient(135deg, #38bdf8, #a855f7);
-  color: #0b1120;
-  box-shadow:
-    0 0 16px rgba(56, 189, 248, 0.7),
-    0 0 24px rgba(168, 85, 247, 0.6);
-
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  cursor: pointer;
-  transition:
-    transform 0.08s ease,
-    box-shadow 0.08s ease,
-    filter 0.08s ease;
-}
-
-.arcade-room-btn .icon {
-  font-size: 15px;
-}
-
-.arcade-room-btn .label {
-  margin-top: 1px;
-}
-
-.arcade-room-btn:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 22px rgba(56, 189, 248, 0.9),
-    0 0 30px rgba(168, 85, 247, 0.9);
-  filter: brightness(1.05);
-}
-
-.arcade-room-btn:active {
-  transform: translateY(0);
-  filter: brightness(0.96);
-}
-
