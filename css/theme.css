@@ -1,44 +1,73 @@
-/* =========================================================
-   Neon Arcade — THEME (GLOBAL)
-   - tło, typografia, bazowe przyciski
-   - auth-bar (powrót + coins + mobile drawer klikany statusem)
-   ========================================================= */
+/* css/theme.css */
+/* NEON ARCADE – globalny motyw (tło, shell, card, topbar/auth-bar, przyciski) */
+
+/* ===========================
+   Base / Reset-ish
+   =========================== */
 
 :root {
-  --bg-main: #020617;
-  --bg-panel: rgba(15, 23, 42, 0.96);
+  --bg0: #020617; /* slate-950 */
+  --bg1: #0b1224; /* deep */
+  --panel: rgba(15, 23, 42, 0.92);
+  --panel2: rgba(2, 6, 23, 0.72);
+  --border: rgba(148, 163, 184, 0.22);
 
   --text: #e5e7eb;
   --muted: #9ca3af;
-  --danger: #ef4444;
 
-  --stroke: rgba(148, 163, 184, 0.18);
-  --stroke-strong: rgba(148, 163, 184, 0.35);
+  --good0: #22c55e;
+  --good1: #16a34a;
 
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --radius-pill: 999px;
+  --info0: #38bdf8;
+  --info1: #0ea5e9;
 
-  --g-green: linear-gradient(135deg, #22c55e, #16a34a);
-  --g-cyan: linear-gradient(135deg, #38bdf8, #0ea5e9);
-  --g-pink: linear-gradient(135deg, #ff2cdf, #00f0ff);
-  --g-red: linear-gradient(135deg, #ef4444, #b91c1c);
+  --warn0: #ef4444;
+  --warn1: #b91c1c;
+
+  --gray0: #6b7280;
+  --gray1: #4b5563;
+
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.8);
+  --shadow2: 0 8px 24px rgba(0, 0, 0, 0.75);
+
+  --radius: 16px;
+  --radius-sm: 12px;
+  --pill: 999px;
 }
 
-* { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
 
 body.arcade-body {
   margin: 0;
-  min-height: 100vh;
+  background: radial-gradient(circle at top, #1f2933, var(--bg0));
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at top, rgba(56,189,248,0.14), transparent 55%),
-    radial-gradient(circle at bottom, rgba(244,63,94,0.14), transparent 55%),
-    var(--bg-main);
+  min-height: 100vh;
 }
 
-/* ====== Bazowe layouty ogólne ====== */
+/* linki */
+a {
+  color: inherit;
+}
+
+a:focus,
+button:focus,
+input:focus {
+  outline: none;
+}
+
+/* ===========================
+   Shell / Card / Header
+   =========================== */
 
 .shell {
   width: 100%;
@@ -49,43 +78,89 @@ body.arcade-body {
 
 .card {
   width: 100%;
-  background: var(--bg-panel);
-  border-radius: var(--radius-lg);
+  background: var(--panel);
+  border-radius: var(--radius);
   padding: 20px 22px 22px;
-  border: 1px solid var(--stroke);
-  box-shadow: 0 18px 45px rgba(0,0,0,.8),
-    0 0 0 1px rgba(148, 163, 184, 0.12);
+  box-shadow: var(--shadow), 0 0 0 1px rgba(148, 163, 184, 0.12);
   backdrop-filter: blur(8px);
 }
 
-/* ====== Bazowe przyciski ogólne ====== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ===========================
+   Global Buttons
+   =========================== */
 
 .btn {
   padding: 8px 12px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--pill);
   border: none;
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
-  transition: transform 0.08s ease, filter 0.08s ease, opacity 0.08s ease;
+
+  transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
 }
 
-.btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
-.btn:active { transform: translateY(1px); opacity: 0.92; }
+.btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
 
-.btn-main { background: var(--g-green); color: #052e16; }
-.btn-secondary { background: var(--g-cyan); color: #0b1120; }
+.btn:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+.btn-main {
+  background: linear-gradient(135deg, var(--good0), var(--good1));
+  color: #052e16;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.5);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--info0), var(--info1));
+  color: #0b1120;
+  box-shadow: 0 8px 18px rgba(56, 189, 248, 0.45);
+}
+
 .btn-ghost {
-  background: rgba(2,6,23,.35);
-  border: 1px solid var(--stroke-strong);
+  background: transparent;
+  border: 1px dashed rgba(148, 163, 184, 0.65);
   color: var(--text);
+  opacity: 0.9;
+}
+
+.btn-ghost:hover {
+  background: rgba(15, 23, 42, 0.55);
+  opacity: 1;
 }
 
 /* ===========================
-   TOPBAR / AUTH BAR (responsive drawer)
+   TOPBAR / AUTH BAR
+   (zgodne z Twoim auth-bar.js)
    =========================== */
 
 .arcade-topbar {
@@ -93,9 +168,7 @@ body.arcade-body {
   top: 0;
   z-index: 50;
   background: rgba(15, 23, 42, 0.96);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.8),
-    0 1px 0 rgba(148, 163, 184, 0.2);
+  box-shadow: var(--shadow2), 0 1px 0 rgba(148, 163, 184, 0.18);
   backdrop-filter: blur(10px);
 }
 
@@ -105,10 +178,10 @@ body.arcade-body {
   justify-content: space-between;
   gap: 10px;
   padding: 10px 14px;
-  box-sizing: border-box;
+  width: 100%;
 }
 
-/* LEWA: back + status/coins */
+/* lewa grupa: back + user */
 .arcade-left {
   display: flex;
   align-items: center;
@@ -116,18 +189,19 @@ body.arcade-body {
   min-width: 0;
 }
 
-/* Back button */
+/* Back: .arcade-back w Twoim HTML */
 .arcade-back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: var(--pill);
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.35);
-  color: #e5e7eb;
+  color: var(--text);
   cursor: pointer;
   white-space: nowrap;
+
   transition: transform 0.08s ease, filter 0.08s ease, background 0.12s ease;
 }
 
@@ -149,23 +223,24 @@ body.arcade-body {
 
 .arcade-back .label {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-/* Status/coins jako przycisk (klik otwiera drawer na mobile) */
+/* status/coins jako przycisk: .arcade-user */
 .arcade-user {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: var(--pill);
+  border: 1px solid rgba(148, 163, 184, 0.22);
   background: rgba(2, 6, 23, 0.55);
-  color: #e5e7eb;
+  color: var(--text);
   cursor: pointer;
   min-width: 0;
+
   transition: filter 0.12s ease, background 0.12s ease;
 }
 
@@ -176,20 +251,20 @@ body.arcade-body {
 
 .auth-status {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 30ch;
+  max-width: 34ch;
 }
 
 .auth-coins {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   white-space: nowrap;
 }
 
-/* Prawa część (desktop) – panel auth */
+/* prawa grupa: panel auth */
 .arcade-auth {
   display: flex;
   flex-wrap: wrap;
@@ -198,34 +273,74 @@ body.arcade-body {
   justify-content: flex-end;
 }
 
+/* inputs w topbarze */
 .arcade-input {
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: var(--pill);
   border: 1px solid rgba(148, 163, 184, 0.5);
-  background: #020617;
-  color: #e5e7eb;
+  background: var(--bg0);
+  color: var(--text);
   font-size: 12px;
-  outline: none;
 }
 
 .arcade-input:focus {
   border-color: rgba(56, 189, 248, 0.7);
 }
 
-/* auth-error */
-.auth-error {
+/* buttons w topbarze: .arcade-btn */
+.arcade-btn {
+  padding: 6px 12px;
+  border-radius: var(--pill);
+  border: none;
+  cursor: pointer;
   font-size: 11px;
-  color: #fca5a5;
-  margin-left: 6px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   white-space: nowrap;
+
+  background: linear-gradient(135deg, var(--good0), var(--good1));
+  color: #052e16;
+  box-shadow: 0 6px 14px rgba(22, 163, 74, 0.45);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
 }
 
-/* "Przypomnij hasło" jako tekst/link */
+.arcade-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 9px 18px rgba(22, 163, 74, 0.6);
+}
+
+.arcade-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+/* logout */
+.arcade-btn.logout {
+  background: linear-gradient(135deg, var(--warn0), var(--warn1));
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.45);
+}
+
+/* (opcjonalnie) jeśli kiedyś wrócisz do gościa w topbarze */
+.arcade-btn.guest {
+  background: linear-gradient(135deg, var(--gray0), var(--gray1));
+  color: #f9fafb;
+  box-shadow: 0 6px 14px rgba(107, 114, 128, 0.45);
+}
+
+/* forgot jako link/tekst */
 .auth-forgot {
   background: none;
   border: none;
   padding: 0 4px;
-  color: #9ca3af;
+  color: var(--muted);
   font-size: 11px;
   cursor: pointer;
   text-decoration: underline;
@@ -233,12 +348,20 @@ body.arcade-body {
 }
 
 .auth-forgot:hover {
-  color: #e5e7eb;
+  color: var(--text);
   opacity: 1;
 }
 
+.auth-error {
+  font-size: 11px;
+  color: #fca5a5;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
 /* ===========================
-   MOBILE: drawer
+   MOBILE: drawer-open dla auth
+   (Twoja klasa: .drawer-open na .arcade-topbar)
    =========================== */
 
 @media (max-width: 520px) {
@@ -246,18 +369,18 @@ body.arcade-body {
     justify-content: flex-start;
   }
 
-  /* Back + status/coins w jednej linii */
+  /* back + user w jednej linii, na całą szerokość */
   .arcade-left {
     width: 100%;
     justify-content: space-between;
   }
 
-  /* Na mobile back tylko strzałka (Arcade znika) */
+  /* back: tylko strzałka */
   .arcade-back .label {
     display: none;
   }
 
-  /* Drawer domyślnie schowany */
+  /* auth panel jako drawer */
   .arcade-auth {
     display: none;
     width: 100%;
@@ -265,7 +388,6 @@ body.arcade-body {
     padding-top: 10px;
     border-top: 1px solid rgba(148, 163, 184, 0.18);
 
-    /* Układ „pola jedno pod drugim” */
     flex-direction: column;
     align-items: stretch;
   }
@@ -278,7 +400,6 @@ body.arcade-body {
   .arcade-auth .arcade-btn,
   .arcade-auth .auth-logout {
     width: 100%;
-    box-sizing: border-box;
     justify-content: center;
   }
 
@@ -289,8 +410,15 @@ body.arcade-body {
     white-space: normal;
   }
 
-  /* status mniej "gadający" na mobile – krócej */
   .auth-status {
     max-width: 18ch;
   }
+}
+
+/* ===========================
+   Utility: hide
+   =========================== */
+
+[hidden] {
+  display: none !important;
 }
