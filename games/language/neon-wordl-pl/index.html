@@ -13,7 +13,6 @@
     <link rel="stylesheet" href="game.css" />
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-
     <script src="../../../js/core/auth.js" defer></script>
     <script src="../../../js/core/progress.js" defer></script>
     <script src="../../../js/core/coins.js" defer></script>
@@ -32,7 +31,7 @@
           <div>
             <h1 class="ga-title" id="ga-title">Neon Wordl PL</h1>
             <div class="ga-subtitle" id="ga-subtitle">
-              Zgadnij polskie słowo w 6 próbach. Zielone – litera i miejsce trafione, żółte – litera jest, ale w innym miejscu.
+              Zgadnij polskie słowo w 6 próbach. Zielone – trafione, żółte – litera w innym miejscu.
             </div>
           </div>
 
@@ -41,8 +40,8 @@
               <span class="ico">🔁</span>Nowa
             </button>
 
-            <button class="ga-btn ga-btn-secondary" id="btn-reset">
-              <span class="ico">🧹</span>Reset rekord
+            <button class="ga-btn ga-btn-secondary" id="btn-hint" title="Podpowiedź (5 💎)">
+              <span class="ico">💡</span>Podpowiedź
             </button>
 
             <button class="ga-btn-mini" id="btn-stats">
@@ -60,23 +59,27 @@
           </div>
 
           <div class="ga-stats-actions">
+            <button class="ga-record-reset" id="btn-reset-best">
+              resetuj rekord
+            </button>
             <button class="ga-btn-mini" id="btn-stats-close">Zamknij</button>
           </div>
         </section>
 
         <div class="ga-stage">
-          <div class="nw-toprow">
-            <label class="nw-label" for="word-len">Długość słowa:</label>
-            <select id="word-len" class="nw-select">
-              <option value="5">Słowo 5-literowe (klasyczne)</option>
-              <option value="4">4 litery</option>
-              <option value="6">6 liter</option>
-              <option value="7">7 liter</option>
-            </select>
-          </div>
+          <div class="nw-stage">
+            <div class="nw-len">
+              <label class="nw-label" for="word-len">Długość słowa:</label>
+              <select id="word-len" class="nw-select">
+                <option value="5">Słowo 5-literowe (klasyczne)</option>
+                <option value="4">4 litery</option>
+                <option value="6">6 liter</option>
+                <option value="7">7 liter</option>
+              </select>
+            </div>
 
-          <div class="nw-center">
             <div id="board" class="board" aria-label="Plansza"></div>
+
             <div id="status" class="status-text">Ładowanie słownika...</div>
             <div id="hint-text" class="hint-text"></div>
           </div>
@@ -84,18 +87,7 @@
 
         <footer class="ga-footer">
           <div class="ga-controls-slot" id="controls-slot" style="--controls-h:auto"></div>
-
-          <div class="ga-hints" id="hints-slot">
-            <div class="nw-hintbox">
-              <div class="nw-hintmeta">
-                <div class="nw-hinttitle">Podpowiedzi za 💎</div>
-                <div class="nw-hintdesc">Odsłoń jedną literę za 5 diamentów. Stan konta masz w górnym pasku.</div>
-              </div>
-              <button id="hint-btn" class="ga-btn ga-btn-secondary">
-                <span class="ico">💡</span>Podpowiedź (5 💎)
-              </button>
-            </div>
-          </div>
+          <div class="ga-hints" id="hints-slot"></div>
         </footer>
       </section>
     </div>
@@ -103,8 +95,12 @@
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const panel = document.getElementById("stats-panel");
-        document.getElementById("btn-stats")?.addEventListener("click", () => panel?.classList.toggle("open"));
-        document.getElementById("btn-stats-close")?.addEventListener("click", () => panel?.classList.remove("open"));
+        document.getElementById("btn-stats")?.addEventListener("click", () => {
+          panel?.classList.toggle("open");
+        });
+        document.getElementById("btn-stats-close")?.addEventListener("click", () => {
+          panel?.classList.remove("open");
+        });
       });
     </script>
   </body>
