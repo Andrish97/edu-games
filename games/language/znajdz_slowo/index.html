@@ -8,14 +8,14 @@
     <link rel="icon" href="../../../favicon.ico" />
     <link rel="shortcut icon" href="../../../favicon.ico" />
 
-    <!-- Motyw globalny + layout gier -->
+    <!-- Global -->
     <link rel="stylesheet" href="../../../css/theme.css" />
     <link rel="stylesheet" href="../../../css/game-layout.css" />
 
-    <!-- Styl gry -->
+    <!-- Game -->
     <link rel="stylesheet" href="game.css" />
 
-    <!-- Supabase – MUSI być przed auth.js -->
+    <!-- Supabase – przed auth.js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 
     <!-- Core -->
@@ -25,26 +25,25 @@
     <script src="../../../js/core/auth-bar.js" defer></script>
     <script src="../../../js/core/ui.js" defer></script>
 
-    <!-- Logika gry -->
+    <!-- Game logic -->
     <script src="game.js" defer></script>
   </head>
 
   <body class="arcade-body arcade-game">
-    <!-- Auth-bar (zawiera powrót + 💎 + logowanie) -->
+    <!-- Pasek logowania + powrót + 💎 -->
     <div data-arcade-auth-bar data-back-url="../../../arcade.html"></div>
 
     <div class="ga-shell">
+      <!-- ga-card = plansza gry (bez dodatkowej karty w środku) -->
       <section class="ga-card">
         <div class="ga-topbar">
           <h1 class="ga-title" id="ga-title">Znajdź słowo</h1>
 
           <div class="ga-actions">
-            <button class="ga-btn ga-btn-primary" id="btn-new">
-              <span class="ico">🔁</span>Nowa runda
-            </button>
-            <button class="ga-btn-mini" id="btn-stats">
-              <span class="ico">📊</span>Staty
-            </button>
+            <!-- Te przyciski mają styl z theme.css -->
+            <button class="btn btn-main" id="btn-new">Nowa gra</button>
+            <button class="btn btn-secondary" id="hintBtn">Podpowiedź (5💎)</button>
+            <button class="btn btn-ghost" id="btn-stats">Staty</button>
           </div>
         </div>
 
@@ -52,56 +51,56 @@
         <section class="ga-stats-panel" id="stats-panel">
           <div class="ga-stats">
             <div class="ga-stat c1">
-              <span class="k">Punkty</span><span class="v" id="v-score">0</span>
+              <span class="k">Punkty</span>
+              <span class="v" id="v-score">0</span>
             </div>
             <div class="ga-stat c2">
-              <span class="k">Świat</span><span class="v" id="v-world">—</span>
+              <span class="k">Świat</span>
+              <span class="v" id="v-world">—</span>
             </div>
             <div class="ga-stat c3">
-              <span class="k">Seria</span><span class="v" id="v-streak">0</span>
+              <span class="k">Seria</span>
+              <span class="v" id="v-streak">0</span>
             </div>
           </div>
 
           <div class="ga-stats-actions">
-            <button class="ga-record-reset" id="btn-reset-best">
-              Wyczyść postęp gry
-            </button>
-            <button class="ga-btn-mini" id="btn-stats-close">Zamknij</button>
+            <button class="ga-record-reset" id="btn-reset-best">Wyczyść postęp gry</button>
+            <button class="btn btn-ghost" id="btn-stats-close">Zamknij</button>
           </div>
         </section>
 
         <div class="ga-stage">
           <!-- Mount gry -->
           <div id="game-mount">
-            <div class="znajdz-slowo-screen">
-              <div class="znajdz-slowo-card">
-                <div class="title">Znajdź słowo</div>
+            <div class="zs-wrap">
+              <div class="zs-title">Znajdź słowo</div>
 
-                <div class="worlds-row" id="worldsRow"></div>
+              <div class="worlds-row" id="worldsRow"></div>
 
-                <div class="top-row">
-                  <div class="world-name" id="worldNameLabel">Świat: —</div>
-                  <div class="streak-info">
-                    Seria: <span id="streak">0</span>
-                  </div>
+              <div class="top-row">
+                <div class="world-name" id="worldNameLabel">Świat: —</div>
+                <div class="streak-info">
+                  Seria: <span id="streak">0</span>
                 </div>
+              </div>
 
-                <div class="progress-wrapper">
-                  <div class="progress-bar" id="progressBar"></div>
-                </div>
+              <div class="progress-wrapper">
+                <div class="progress-bar" id="progressBar"></div>
+              </div>
 
-                <div class="emoji-box" id="emoji">🐱</div>
-                <div class="hint" id="hint">Kliknij wyraz, który pasuje do obrazka.</div>
+              <!-- DUŻY EMOJI Z TŁEM (CSS .emoji-box) -->
+              <div class="emoji-box" id="emoji">🐱</div>
 
-                <div class="choices" id="choices"></div>
+              <div class="hint" id="hint">Kliknij wyraz, który pasuje do obrazka.</div>
 
-                <div id="message"></div>
+              <div class="choices" id="choices"></div>
 
-                <div class="bottom-row">
-                  <div id="score">Punkty: 0</div>
-                  <button id="hintBtn" class="btn-hint">Podpowiedź (5💎)</button>
-                  <button id="next">Następne</button>
-                </div>
+              <div id="message"></div>
+
+              <div class="bottom-row">
+                <div id="score">Punkty: 0</div>
+                <button id="next" class="btn btn-ghost">Następne</button>
               </div>
             </div>
           </div>
