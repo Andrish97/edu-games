@@ -172,9 +172,12 @@
 
     // domyślny art.svg tylko dla nie-style
     if (!json.art) json.art = {};
-    if (!json.art.svg && json.kind !== "room_style") {
-      json.art.svg = `assets/room/${itemId}.svg`;
+    
+    // domyślny svg tylko dla normalnych itemów
+    if (!json.art.svg && json.kind !== "room_style" && json.categoryId !== "walls") {
+      json.art.svg = "assets/room/" + itemId + ".svg";
     }
+
 
     itemsById[itemId] = json;
     return json;
@@ -343,7 +346,10 @@
     const body = document.createElement("div");
     body.className = "room-shop-item-body";
 
-    if (item.art && item.art.svg) {
+    const isStyle = item.kind === "room_style" || item.categoryId === "walls" || (category && category.id === "walls");
+
+      if (!isStyle && item.art && item.art.svg) {
+
       const previewWrap = document.createElement("div");
       previewWrap.className = "room-shop-item-preview";
 
