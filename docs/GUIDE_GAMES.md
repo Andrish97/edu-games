@@ -587,5 +587,15 @@ if (finalScore >= 5000) {
 }
 ```
 
+### Reset rekordów / danych gry (wymagany wzorzec UI)
+
+- Przycisk **Resetuj rekord** jest akcją destrukcyjną i **nie może być w topbarze**.
+- Reset umieszczamy **wyłącznie** w panelu statów:
+  - kontener: `.ga-stats-actions`
+  - klasa przycisku: `.ga-record-reset`
+  - id zalecane: `btn-reset-best`
+- Reset dotyczy **tylko progresu tej gry** (`ArcadeProgress.save/load`), nie dotyka monet 💎 ani auth.
+
+
 ---
 **Koniec pliku.**
