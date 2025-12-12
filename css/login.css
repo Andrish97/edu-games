@@ -1,5 +1,5 @@
 /* css/login.css */
-/* Neon Arcade – strona logowania (stabilny układ, RWD) */
+/* Neon Arcade – strona logowania (stabilny układ, RWD, fix mobile inputów) */
 
 .shell {
   width: 100%;
@@ -32,6 +32,16 @@
   width: 100%;
   box-sizing: border-box;
   display: block;
+
+  /* FIX: nie mogą się rozciągać do wielkich “kapsuł” przez theme */
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+  line-height: 1.2 !important;
+  height: auto !important;
+  min-height: 44px;
+
+  /* FIX iOS: brak auto-zoom + stabilna wysokość */
+  font-size: 16px !important;
 }
 
 /* rząd przycisków */
@@ -111,5 +121,11 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+  }
+
+  /* Minimalnie ciaśniej na małych ekranach */
+  .auth-controls .arcade-input {
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
   }
 }
