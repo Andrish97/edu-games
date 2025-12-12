@@ -70,7 +70,6 @@
 
     const topbar = q(".arcade-topbar");
     const toggleBtn = q("[data-auth-toggle]");
-    const drawer = q("[data-auth-drawer]");
 
     const email = q(".auth-email");
     const pass = q(".auth-pass");
