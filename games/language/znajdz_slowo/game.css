@@ -1,48 +1,33 @@
 /* =========================================
-   Znajdź słowo – Neon Arcade (2025)
-   Wersja pod game-layout.css (ga-stage)
+   Znajdź słowo – game.css (Neon Arcade 2025)
+   - używa ga-card jako planszy (bez drugiej karty)
+   - przyciski stylowane zgodnie z theme.css (.btn*)
    ========================================= */
 
-/* Mount w ga-stage */
+/* Mount gry w ga-stage */
 #game-mount {
-  min-height: calc(100vh - 64px);
-  display: grid;
-  place-items: center;
-  padding: 16px;
-}
-
-/* Ekran */
-.znajdz-slowo-screen {
   width: 100%;
-  display: flex;
-  justify-content: center;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 10px 6px 14px;
 }
 
-/* KARTA */
-.znajdz-slowo-card {
-  padding: 20px 22px 22px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.96);
-  box-shadow:
-    0 18px 45px rgba(0, 0, 0, 0.8),
-    0 0 0 1px rgba(148, 163, 184, 0.12);
+/* Układ gry wewnątrz ga-card */
+.zs-wrap {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 320px;
-  max-width: 480px;
-  width: 100%;
-  backdrop-filter: blur(8px);
 }
 
-/* TYTUŁ */
-.title {
+/* Tytuł */
+.zs-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #e5e7eb;
-  margin-bottom: 8px;
+  margin: 2px 0 10px;
   text-align: center;
 }
 
@@ -51,23 +36,24 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   width: 100%;
+  justify-content: flex-start;
 }
 
 .world-btn {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(2, 6, 23, 0.35);
   color: #e5e7eb;
   cursor: pointer;
   font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.9);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55);
   transition:
     transform 0.06s ease,
     box-shadow 0.06s ease,
@@ -77,10 +63,10 @@
 }
 
 .world-btn.active {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: var(--g-green);
   color: #022c22;
-  border-color: #4ade80;
-  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.55);
+  border-color: rgba(74, 222, 128, 0.9);
+  box-shadow: 0 10px 22px rgba(22, 163, 74, 0.45);
 }
 
 .world-btn.locked {
@@ -91,7 +77,7 @@
 
 .world-btn:hover:not(.locked):not(.active) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.95);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.65);
 }
 
 /* GÓRNA LINIA */
@@ -106,7 +92,8 @@
 }
 
 .streak-info {
-  font-weight: 500;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .streak-info.streak-highlight {
@@ -118,8 +105,8 @@
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(2, 6, 23, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.35);
   overflow: hidden;
   margin-bottom: 14px;
 }
@@ -128,15 +115,15 @@
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #22c55e, #16a34a);
+  background: var(--g-green);
   transition: width 0.25s ease;
 }
 
-/* EMOJI */
+/* EMOJI – DUŻY Z TŁEM (wraca) */
 .emoji-box {
-  width: 120px;
-  height: 120px;
-  border-radius: 24px;
+  width: 132px;
+  height: 132px;
+  border-radius: 26px;
   background: radial-gradient(
     circle at 30% 20%,
     #facc15,
@@ -146,8 +133,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 64px;
-  margin-bottom: 16px;
+  font-size: 72px;
+  margin: 6px 0 14px;
   box-shadow:
     0 18px 35px rgba(0, 0, 0, 0.85),
     0 0 0 1px rgba(248, 250, 252, 0.06);
@@ -176,47 +163,117 @@
   padding: 10px 12px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(2, 6, 23, 0.35);
   color: #e5e7eb;
   cursor: pointer;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 700;
   text-align: center;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.8);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.55);
   transition:
     transform 0.06s ease,
     box-shadow 0.06s ease,
-    background 0.08s,
-    border-color 0.08s,
-    filter 0.08s;
+    filter 0.08s,
+    border-color 0.08s;
 }
 
 .choice-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.95);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.65);
   filter: brightness(1.05);
 }
 
 .choice-btn:active {
-  transform: translateY(0px) scale(0.98);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.9);
-  filter: brightness(0.96);
+  transform: translateY(0px) scale(0.99);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.55);
+  filter: brightness(0.98);
 }
 
 .choice-btn.correct {
   background: radial-gradient(circle at top, #22c55e, #16a34a);
-  border-color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.9);
   color: #022c22;
 }
 
 .choice-btn.wrong {
   background: radial-gradient(circle at top, #f97373, #b91c1c);
-  border-color: #fecaca;
+  border-color: rgba(254, 202, 202, 0.9);
+  color: #12050a;
 }
 
 .choice-btn.disabled {
   pointer-events: none;
-  opacity: 0.65;
+  opacity: 0.7;
+}
+
+/* MESSAGE + DÓŁ */
+#message {
+  margin-top: 10px;
+  min-height: 24px;
+  font-size: 13px;
+  color: #c4b5fd;
+  text-align: center;
+}
+
+.bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  gap: 10px;
+  font-size: 13px;
+}
+
+#score {
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #e5e7eb;
+}
+
+/* ===== Topbar buttons: używamy stylu z theme.css =====
+   Jeśli w HTML dodasz klasy .btn, to wystarczy.
+   Ale na wszelki wypadek styluję też po ID. */
+
+#btn-new,
+#hintBtn,
+#next {
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: transform 0.08s ease, filter 0.08s ease, opacity 0.08s ease;
+}
+
+#btn-new:hover,
+#hintBtn:hover,
+#next:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+#btn-new:active,
+#hintBtn:active,
+#next:active {
+  transform: translateY(1px);
+  opacity: 0.92;
+}
+
+/* Kolory zgodne z theme */
+#btn-new { background: var(--g-green); color: #052e16; }
+#hintBtn { background: var(--g-cyan); color: #0b1120; }
+#next { background: rgba(2, 6, 23, 0.35); border: 1px solid var(--stroke-strong); color: var(--text); }
+
+#hintBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+  filter: none;
 }
 
 /* SHAKE */
@@ -232,102 +289,13 @@
   100% { transform: translateX(0); }
 }
 
-/* DÓŁ KARTY */
-.bottom-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: 12px;
-  gap: 8px;
-  font-size: 13px;
-}
-
-#score {
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  color: #e5e7eb;
-}
-
-#message {
-  margin-top: 6px;
-  min-height: 24px;
-  font-size: 13px;
-  color: #c4b5fd;
-  text-align: center;
-}
-
-/* PRZYCISK NASTĘPNE */
-button#next {
-  padding: 6px 14px;
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #052e16;
-  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.45);
-  transition:
-    transform 0.06s ease,
-    box-shadow 0.06s ease,
-    filter 0.08s;
-}
-
-button#next:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(22, 163, 74, 0.6);
-  filter: brightness(1.05);
-}
-
-button#next:active {
-  transform: translateY(0px) scale(0.98);
-  box-shadow: 0 6px 14px rgba(22, 163, 74, 0.45);
-  filter: brightness(0.97);
-}
-
-/* PRZYCISK PODPOWIEDZI */
-.btn-hint {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  background: linear-gradient(135deg, #a855f7, #7c3aed);
-  color: white;
-  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.45);
-  transition:
-    transform 0.06s ease,
-    box-shadow 0.06s ease,
-    filter 0.08s;
-}
-
-.btn-hint:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(124, 58, 237, 0.6);
-  filter: brightness(1.05);
-}
-
-.btn-hint:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
 /* RWD */
-@media (max-width: 480px) {
-  .znajdz-slowo-card {
-    min-width: 0;
-    width: 100%;
-  }
-
+@media (max-width: 520px) {
+  #game-mount { padding: 8px 0 12px; }
   .emoji-box {
-    width: 96px;
-    height: 96px;
-    font-size: 48px;
+    width: 112px;
+    height: 112px;
+    font-size: 60px;
   }
-
-  .choice-btn {
-    font-size: 14px;
-  }
+  .choice-btn { font-size: 14px; }
 }
