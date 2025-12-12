@@ -1,33 +1,25 @@
 // js/pages/room-scene.js
-// Neon Room – render sceny pokoju 2D (pseudo-3D) + drag + edycja + focus highlight
-// Wymaga: js/core/room-api.js (ArcadeRoom), js/core/progress.js, js/core/ui.js
+// Neon Room – scena pokoju 2D pseudo-3D + EDIT (drag, usuń) + focus
 
 (function () {
   "use strict";
 
-  // DOM
-  let sceneEl = null;                 // #room-scene (warstwa obiektów)
-  let sceneWrapperEl = null;          // .room2d-scene-wrapper (dla klas stylu)
-  let btnEdit = null;                 // #room-btn-edit
-  let btnSave = null;                 // #room-btn-save
-  let btnShop = null;                 // #room-btn-open-shop
+  let sceneEl = null;
+  let wrapperEl = null;
 
-  // Stan
-  let roomState = null;               // { instances, roomStyleId, ... }
+  let btnEdit = null;
+  let btnSave = null;
+  let btnShop = null;
+
+  let roomState = null;
   let editMode = false;
 
-  // Definicje itemów (cache)
-  const itemDefs = new Map();         // itemId -> def
+  const defsCache = new Map();
 
-  // Drag
-  let drag = {
+  const drag = {
     active: false,
-    instanceId: null,
     pointerId: null,
-    startX: 0,
-    startY: 0,
-    startInstX: 0,
-    startInstY: 0,
+    instanceId: null,
     moved: false
   };
 
@@ -35,59 +27,38 @@
 
   async function init() {
     sceneEl = document.getElementById("room-scene");
-    sceneWrapperEl = document.querySelector(".room2d-scene-wrapper");
+    wrapperEl = document.querySelector(".room2d-scene-wrapper");
 
     btnEdit = document.getElementById("room-btn-edit");
     btnSave = document.getElementById("room-btn-save");
     btnShop = document.getElementById("room-btn-open-shop");
 
-    if (!sceneEl || !sceneWrapperEl) {
+    if (!sceneEl || !wrapperEl) {
       console.error("[RoomScene] Brak #room-scene lub .room2d-scene-wrapper");
       return;
     }
 
-    // Back button do arcade (jeśli chcesz)
-    if (window.ArcadeUI && typeof ArcadeUI.addBackToArcadeButton === "function") {
-      ArcadeUI.addBackToArcadeButton({ backUrl: "arcade.html" });
-    }
-
-    // Buttony
-    btnEdit?.addEventListener("click", toggleEditMode);
+    btnEdit?.addEventListener("click", () => setEditMode(!editMode));
     btnSave?.addEventListener("click", saveRoom);
     btnShop?.addEventListener("click", () => (window.location.href = "room-shop.html"));
 
-    // Ładuj stan + render
-    await loadRoom();
-    await renderAll();
-
-    // Focus highlight, jeśli przyszliśmy ze sklepu
-    const focusId = getQueryParam("focus");
-    if (focusId) {
-      setTimeout(() => focusInstance(focusId), 30);
+    if (window.ArcadeUI?.addBackToArcadeButton) {
+      ArcadeUI.addBackToArcadeButton({ backUrl: "arcade.html" });
     }
 
-    // Re-render przy zmianie rozmiaru (żeby trzymać pozycje)
-    window.addEventListener("resize", () => {
-      // nie przeliczamy stanu, tylko przerysowujemy
-      renderInstances();
-    });
-  }
+    await loadRoom();
+    await applyRoomStyle();
+    await prefetchDefs();
+    renderInstances();
 
-  // ------------------------------------
-  // Helpers
-  // ------------------------------------
+    const focusId = getQueryParam("focus");
+    if (focusId) setTimeout(() => focusInstance(focusId), 30);
+
+    window.addEventListener("resize", () => renderInstances());
+  }
 
   function getQueryParam(name) {
-    const u = new URL(window.location.href);
-    return u.searchParams.get(name);
-  }
-
-  function clamp(v, min, max) {
-    return Math.max(min, Math.min(max, v));
-  }
-
-  function clamp01(v) {
-    return clamp(v, 0, 1);
+    return new URL(window.location.href).searchParams.get(name);
   }
 
   function url(path) {
@@ -100,256 +71,207 @@
     return await res.json();
   }
 
-  // ------------------------------------
-  // Room state
-  // ------------------------------------
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function clamp01(v) { return clamp(v, 0, 1); }
 
   async function loadRoom() {
-    if (!window.ArcadeRoom || typeof ArcadeRoom.loadRoomState !== "function") {
-      console.error("[RoomScene] Brak ArcadeRoom.loadRoomState (sprawdź js/core/room-api.js)");
+    if (!window.ArcadeRoom?.loadRoomState) {
+      console.error("[RoomScene] Brak ArcadeRoom.loadRoomState – sprawdź js/core/room-api.js");
       roomState = { instances: [], roomStyleId: null, unlockedItemTypes: {} };
       return;
     }
-
     roomState = await ArcadeRoom.loadRoomState();
-    roomState.instances = roomState.instances || [];
+    roomState.instances ||= [];
   }
 
   async function saveRoom() {
-    if (!window.ArcadeRoom || typeof ArcadeRoom.saveRoomState !== "function") return;
+    if (!window.ArcadeRoom?.saveRoomState) return;
     await ArcadeRoom.saveRoomState(roomState);
   }
 
-  // ------------------------------------
-  // Item defs
-  // ------------------------------------
-
-  async function getItemDef(itemId) {
-    if (itemDefs.has(itemId)) return itemDefs.get(itemId);
-
+  async function getDef(itemId) {
+    if (defsCache.has(itemId)) return defsCache.get(itemId);
     const def = await fetchJson(`data/items/${itemId}.json`);
-
-    if (!def.art) def.art = {};
-
-    // domyślny svg dla normalnych obiektów (nie dotyczy stylu)
-    if (def.kind !== "room_style" && !def.art.svg) {
-      def.art.svg = `assets/room/${itemId}.svg`;
-    }
-
-    itemDefs.set(itemId, def);
+    def.art ||= {};
+    if (def.kind !== "room_style" && !def.art.svg) def.art.svg = `assets/room/${itemId}.svg`;
+    defsCache.set(itemId, def);
     return def;
   }
 
-  // ------------------------------------
-  // Render
-  // ------------------------------------
-
-  async function renderAll() {
-    await applyRoomStyle();
-    await prefetchDefsForInstances();
-    renderInstances();
+  async function prefetchDefs() {
+    const ids = new Set(roomState.instances.map(i => i.itemId));
+    await Promise.allSettled([...ids].map(getDef));
   }
 
   async function applyRoomStyle() {
-    // zdejmij wszystkie klasy "room-style-*"
-    const classes = [...sceneWrapperEl.classList];
-    for (const c of classes) {
-      if (c.startsWith("room-style-")) sceneWrapperEl.classList.remove(c);
-    }
+    // usuń stare room-style-*
+    [...wrapperEl.classList].forEach(c => { if (c.startsWith("room-style-")) wrapperEl.classList.remove(c); });
 
     if (!roomState.roomStyleId) return;
 
     try {
-      const styleDef = await getItemDef(roomState.roomStyleId);
-      const className = styleDef?.style?.className;
-
-      if (className) {
-        sceneWrapperEl.classList.add(className);
-      }
+      const styleDef = await getDef(roomState.roomStyleId);
+      const cn = styleDef?.style?.className;
+      if (cn) wrapperEl.classList.add(cn);
     } catch (e) {
-      console.warn("[RoomScene] Nie udało się załadować stylu pokoju:", e);
+      console.warn("[RoomScene] styl nie wczytany:", e);
     }
   }
 
-  async function prefetchDefsForInstances() {
-    const ids = new Set();
-    for (const inst of (roomState.instances || [])) ids.add(inst.itemId);
-
-    // równolegle
-    await Promise.allSettled([...ids].map((id) => getItemDef(id)));
+  function setEditMode(on) {
+    editMode = !!on;
+    btnEdit?.classList.toggle("is-active", editMode);
+    renderInstances();
   }
 
   function renderInstances() {
     sceneEl.innerHTML = "";
 
-    // sortujemy dla pseudo-3D: floor/surface wg y (im niżej, tym wyżej na warstwie)
-    const instances = [...(roomState.instances || [])];
+    const list = [...roomState.instances];
 
-    instances.sort((a, b) => {
-      const za = zOrder(a);
-      const zb = zOrder(b);
-      return za - zb;
-    });
+    // sort: floor/surface zależnie od y (pseudo 3D)
+    list.sort((a, b) => zOrder(a) - zOrder(b));
 
-    for (const inst of instances) {
-      const def = itemDefs.get(inst.itemId);
+    for (const inst of list) {
+      const def = defsCache.get(inst.itemId);
       if (!def) continue;
-
-      // nie renderujemy stylów jako obiekty
       if (def.kind === "room_style") continue;
 
-      const el = createInstanceElement(inst, def);
+      const el = createEl(inst, def);
       sceneEl.appendChild(el);
     }
   }
 
   function zOrder(inst) {
-    const att = inst.attachment || "floor";
-    if (att === "ceiling") return 10;          // zawsze "z tyłu"
-    if (att === "wall") return 200;            // na ścianie (średnio)
-    if (att === "surface") return 700 + Math.round((inst.y || 0.5) * 200);
-    // floor
-    return 800 + Math.round((inst.y || 0.5) * 200);
+    const a = inst.attachment || "floor";
+    if (a === "ceiling") return 10;
+    if (a === "wall") return 200 + Math.round((inst.x || 0.5) * 50);
+    if (a === "surface") return 650 + Math.round((inst.y || 0.6) * 200);
+    return 800 + Math.round((inst.y || 0.9) * 200);
   }
 
-  function createInstanceElement(inst, def) {
+  function defaultY(att) {
+    if (att === "ceiling") return 0.18;
+    if (att === "wall") return 0.42;
+    if (att === "surface") return 0.65;
+    return 0.90;
+  }
+
+  function clampPos(x, y, att) {
+    x = clamp01(x);
+    y = clamp01(y);
+
+    if (att === "ceiling") return { x: clamp(x, 0.12, 0.88), y: clamp(y, 0.08, 0.22) };
+    if (att === "wall") return { x: clamp(x, 0.12, 0.88), y: clamp(y, 0.18, 0.58) };
+    if (att === "surface") return { x: clamp(x, 0.10, 0.90), y: clamp(y, 0.52, 0.80) };
+    return { x: clamp(x, 0.08, 0.92), y: clamp(y, 0.64, 0.96) };
+  }
+
+  function sizeRel(def, att) {
+    const s = def.sizeRel || def.size;
+    if (s && typeof s.w === "number" && typeof s.h === "number") {
+      return { w: clamp(s.w, 0.06, 0.7), h: clamp(s.h, 0.06, 0.7) };
+    }
+    if (att === "wall") return { w: 0.14, h: 0.22 };
+    if (att === "ceiling") return { w: 0.10, h: 0.18 };
+    if (att === "surface") return { w: 0.14, h: 0.20 };
+    return { w: 0.18, h: 0.24 };
+  }
+
+  function anchorTransform(att, rotationDeg) {
+    // wall: kotwica bliżej środka (nie -100% wysokości)
+    if (att === "wall") return `translate(-50%, -70%) rotate(${rotationDeg}deg)`;
+    if (att === "ceiling") return `translate(-50%, -20%) rotate(${rotationDeg}deg)`;
+    // floor/surface – klasycznie stoi na podłodze/blacie
+    return `translate(-50%, -100%) rotate(${rotationDeg}deg)`;
+  }
+
+  function createEl(inst, def) {
+    const att = inst.attachment || def?.art?.anchor?.attachment || "floor";
+    const pos = clampPos(inst.x ?? 0.5, inst.y ?? defaultY(att), att);
+    inst.x = pos.x;
+    inst.y = pos.y;
+    inst.attachment = att;
+
+    const s = sizeRel(def, att);
+
     const el = document.createElement("div");
-    el.className = "room2d-object";
-
-    const attachment = inst.attachment || def?.art?.anchor?.attachment || "floor";
-    el.classList.add(`room2d-object--${attachment}`);
-
-    // tryb edycji – outline
+    el.className = `room2d-object room2d-object--${att}`;
     if (editMode) el.classList.add("room2d-object--editable");
 
-    // id instancji (dla focus i dla usuwania)
     el.dataset.instanceId = inst.instanceId;
 
-    // rozmiar w % sceny
-    const size = computeSize(def, attachment);
-    el.style.width = `${size.w * 100}%`;
-    el.style.height = `${size.h * 100}%`;
+    el.style.width = `${s.w * 100}%`;
+    el.style.height = `${s.h * 100}%`;
 
-    // pozycja (x,y to 0..1)
-    const pos = clampPos(inst.x ?? 0.5, inst.y ?? defaultYForAttachment(attachment), attachment);
     el.style.left = `${pos.x * 100}%`;
     el.style.top = `${pos.y * 100}%`;
-    el.style.transform = `translate(-50%, -100%) rotate(${inst.rotation || 0}deg)`;
-
-    // warstwa
+    el.style.transform = anchorTransform(att, inst.rotation || 0);
     el.style.zIndex = String(zOrder(inst));
 
-    // obrazek
     const img = document.createElement("img");
     img.className = "room2d-object-img";
     img.alt = def.name || def.id || inst.itemId;
     img.draggable = false;
 
-    if (def.art && def.art.svg) {
-      img.src = def.art.svg;
-    } else {
-      // awaryjnie
-      img.src = `assets/room/${inst.itemId}.svg`;
-    }
+    img.src = def.art?.svg || `assets/room/${inst.itemId}.svg`;
+
+    // jeśli SVG nie istnieje / nie wczyta się -> placeholder
+    img.onerror = () => {
+      img.remove();
+      const ph = document.createElement("div");
+      ph.style.width = "100%";
+      ph.style.height = "100%";
+      ph.style.borderRadius = "0.6rem";
+      ph.style.display = "flex";
+      ph.style.alignItems = "center";
+      ph.style.justifyContent = "center";
+      ph.style.background = "rgba(2,6,23,0.6)";
+      ph.style.border = "1px solid rgba(248,113,113,0.6)";
+      ph.style.fontSize = "0.75rem";
+      ph.style.padding = "0.35rem";
+      ph.style.textAlign = "center";
+      ph.textContent = `Brak SVG:\n${inst.itemId}`;
+      el.appendChild(ph);
+    };
 
     el.appendChild(img);
 
     // interakcje
     el.addEventListener("pointerdown", (ev) => onPointerDown(ev, inst.instanceId));
-    el.addEventListener("click", (ev) => onInstanceClick(ev, inst.instanceId));
+    el.addEventListener("click", (ev) => onClickInstance(ev, inst.instanceId));
 
     return el;
   }
 
-  function computeSize(def, attachment) {
-    // Jeśli item JSON ma sizeRel: { w:0.18, h:0.2 } to użyj.
-    // Inaczej domyślne zależne od attachmentu.
-    const sr = def.sizeRel || def.size || null;
-
-    if (sr && typeof sr === "object" && typeof sr.w === "number" && typeof sr.h === "number") {
-      return { w: clamp(sr.w, 0.05, 0.9), h: clamp(sr.h, 0.05, 0.9) };
-    }
-
-    if (attachment === "wall") return { w: 0.14, h: 0.22 };
-    if (attachment === "ceiling") return { w: 0.10, h: 0.18 };
-    if (attachment === "surface") return { w: 0.12, h: 0.18 };
-    // floor
-    return { w: 0.18, h: 0.22 };
-  }
-
-  function defaultYForAttachment(attachment) {
-    if (attachment === "ceiling") return 0.18;
-    if (attachment === "wall") return 0.42;
-    if (attachment === "surface") return 0.62;
-    return 0.90; // floor
-  }
-
-  function clampPos(x, y, attachment) {
-    // zakresy dla "logiki pokoju"
-    x = clamp01(x);
-    y = clamp01(y);
-
-    if (attachment === "ceiling") {
-      return { x: clamp(x, 0.08, 0.92), y: clamp(y, 0.08, 0.22) };
-    }
-    if (attachment === "wall") {
-      return { x: clamp(x, 0.10, 0.90), y: clamp(y, 0.18, 0.58) };
-    }
-    if (attachment === "surface") {
-      return { x: clamp(x, 0.08, 0.92), y: clamp(y, 0.52, 0.78) };
-    }
-    // floor
-    return { x: clamp(x, 0.06, 0.94), y: clamp(y, 0.62, 0.96) };
-  }
-
-  // ------------------------------------
-  // Edit mode
-  // ------------------------------------
-
-  function toggleEditMode() {
-    editMode = !editMode;
-    if (btnEdit) btnEdit.classList.toggle("is-active", editMode);
-    renderInstances();
-  }
-
-  async function onInstanceClick(ev, instanceId) {
-    // click po drag'u ignorujemy
+  function onClickInstance(ev, instanceId) {
     if (drag.moved) return;
-
     if (!editMode) return;
 
     ev.preventDefault();
     ev.stopPropagation();
 
-    const ok = confirm("Usunąć ten przedmiot z pokoju? (Będzie dalej dostępny jako kupiony w sklepie)");
+    const ok = confirm("Usunąć ten przedmiot z pokoju? (Będzie dalej kupiony w sklepie)");
     if (!ok) return;
 
-    roomState.instances = (roomState.instances || []).filter((i) => i.instanceId !== instanceId);
-    await saveRoom();
+    roomState.instances = roomState.instances.filter(i => i.instanceId !== instanceId);
+    saveRoom();
     renderInstances();
   }
 
-  // ------------------------------------
-  // Drag & Drop
-  // ------------------------------------
-
   function onPointerDown(ev, instanceId) {
+    if (!editMode) return; // drag tylko w edycji
+
     ev.preventDefault();
     ev.stopPropagation();
 
     const el = ev.currentTarget;
-    if (!el || !sceneEl) return;
-
-    const inst = (roomState.instances || []).find((i) => i.instanceId === instanceId);
+    const inst = roomState.instances.find(i => i.instanceId === instanceId);
     if (!inst) return;
 
     drag.active = true;
-    drag.instanceId = instanceId;
     drag.pointerId = ev.pointerId;
-    drag.startX = ev.clientX;
-    drag.startY = ev.clientY;
-    drag.startInstX = inst.x ?? 0.5;
-    drag.startInstY = inst.y ?? defaultYForAttachment(inst.attachment || "floor");
+    drag.instanceId = instanceId;
     drag.moved = false;
 
     el.setPointerCapture(ev.pointerId);
@@ -362,29 +284,24 @@
   function onPointerMove(ev) {
     if (!drag.active || ev.pointerId !== drag.pointerId) return;
 
-    const inst = (roomState.instances || []).find((i) => i.instanceId === drag.instanceId);
+    const inst = roomState.instances.find(i => i.instanceId === drag.instanceId);
     if (!inst) return;
 
     const rect = sceneEl.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
-    const dx = ev.clientX - drag.startX;
-    const dy = ev.clientY - drag.startY;
-
-    // próg – żeby click nie traktował się jako drag
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) drag.moved = true;
-
-    // przeliczamy na 0..1
     const nx = (ev.clientX - rect.left) / rect.width;
     const ny = (ev.clientY - rect.top) / rect.height;
 
-    const attachment = inst.attachment || "floor";
-    const pos = clampPos(nx, ny, attachment);
+    const pos = clampPos(nx, ny, inst.attachment || "floor");
+
+    const dx = Math.abs((inst.x ?? 0) - pos.x);
+    const dy = Math.abs((inst.y ?? 0) - pos.y);
+    if (dx > 0.002 || dy > 0.002) drag.moved = true;
 
     inst.x = pos.x;
     inst.y = pos.y;
 
-    // live update elementu
     const el = sceneEl.querySelector(`.room2d-object[data-instance-id="${CSS.escape(inst.instanceId)}"]`);
     if (el) {
       el.style.left = `${pos.x * 100}%`;
@@ -393,13 +310,11 @@
     }
   }
 
-  async function onPointerUp(ev) {
+  function onPointerUp(ev) {
     if (!drag.active || ev.pointerId !== drag.pointerId) return;
 
     const el = ev.currentTarget;
-    try {
-      el.releasePointerCapture(ev.pointerId);
-    } catch (_) {}
+    try { el.releasePointerCapture(ev.pointerId); } catch (_) {}
 
     el.removeEventListener("pointermove", onPointerMove);
     el.removeEventListener("pointerup", onPointerUp);
@@ -407,34 +322,23 @@
 
     drag.active = false;
 
-    // zapis tylko jeśli rzeczywiście przesunęliśmy
     if (drag.moved) {
-      await saveRoom();
-      // po zapisie odśwież z-order sort (żeby elementy nie „wariowały”)
+      saveRoom();
       renderInstances();
     }
 
-    // reset moved po krótkiej chwili, żeby click po up nie usuwał
     setTimeout(() => {
       drag.moved = false;
-      drag.instanceId = null;
       drag.pointerId = null;
+      drag.instanceId = null;
     }, 0);
   }
 
-  // ------------------------------------
-  // Focus highlight (room.html?focus=...)
-  // ------------------------------------
-
   function focusInstance(instanceId) {
-    if (!instanceId) return;
-
     const el = sceneEl.querySelector(`.room2d-object[data-instance-id="${CSS.escape(instanceId)}"]`);
     if (!el) return;
 
     el.classList.add("is-focus");
-
-    // delikatnie przenieś na wierzch na czas focus
     const oldZ = el.style.zIndex;
     el.style.zIndex = "9999";
 
