@@ -1,4 +1,6 @@
-// Neon Wordl PL (2025) – ta sama logika, odchudzona integracja z Arcade
+/* =========================
+   NEON WORDL PL – GAME JS
+   ========================= */
 
 const GAME_ID = "neon-wordl-pl";
 const DICT_URL =
@@ -6,6 +8,8 @@ const DICT_URL =
 
 const MAX_ROWS = 6;
 const HINT_COST = 5;
+
+/* ===== STAN ===== */
 
 let allWords = [];
 let validWords = [];
@@ -26,47 +30,49 @@ let wins = 0;
 let currentStreak = 0;
 let maxStreak = 0;
 
-let statusEl, hintTextEl, boardEl, wordLenSel;
+/* ===== DOM ===== */
+
+let boardEl, statusEl, hintTextEl, wordLenSel;
+let btnNew, btnHint, btnReset;
 let statGamesEl, statWinsEl, statStreakEl, statMaxStreakEl;
-let btnNew, btnReset, hintBtn;
 let controlsSlotEl;
 
+/* ===== KEYBOARD ===== */
+
 const KEYBOARD_LAYOUT = [
-  ["w", "e", "r", "t", "y", "u", "i", "o", "p"],
-  ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-  ["z", "ź", "ż", "c", "b", "n", "m", "backspace"],
-  ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "enter"],
+  ["w","e","r","t","y","u","i","o","p"],
+  ["a","s","d","f","g","h","j","k","l"],
+  ["z","ź","ż","c","b","n","m","backspace"],
+  ["ą","ć","ę","ł","ń","ó","ś","enter"]
 ];
 
-const KEY_STATE_PRIORITY = { absent: 0, present: 1, correct: 2 };
+const KEY_PRIORITY = { absent:0, present:1, correct:2 };
 
-function normalizeWord(w) {
-  return w.toLowerCase().replace(/[^a-ząćęłńóśżź]/g, "");
-}
+/* ===== HELPERS ===== */
 
-function isLoggedInCoinsAvailable() {
-  return (
-    typeof window !== "undefined" &&
-    window.ArcadeCoins &&
-    typeof ArcadeCoins.addForGame === "function" &&
-    typeof ArcadeCoins.getBalance === "function"
-  );
-}
+const normalize = w => w.toLowerCase().replace(/[^a-ząćęłńóśżź]/g,"");
+
+const coinsReady = () =>
+  window.ArcadeCoins &&
+  ArcadeCoins.addForGame &&
+  ArcadeCoins.getBalance;
+
+/* ===== INIT ===== */
 
 function cacheDom() {
+  boardEl = document.getElementById("board");
   statusEl = document.getElementById("status");
   hintTextEl = document.getElementById("hint-text");
-  boardEl = document.getElementById("board");
   wordLenSel = document.getElementById("word-len");
+
+  btnNew = document.getElementById("btn-new");
+  btnHint = document.getElementById("btn-hint");
+  btnReset = document.getElementById("btn-reset-best");
 
   statGamesEl = document.getElementById("stat-games");
   statWinsEl = document.getElementById("stat-wins");
   statStreakEl = document.getElementById("stat-streak");
   statMaxStreakEl = document.getElementById("stat-max-streak");
-
-  btnNew = document.getElementById("btn-new");
-  btnReset = document.getElementById("btn-reset");
-  hintBtn = document.getElementById("hint-btn");
 
   controlsSlotEl = document.getElementById("controls-slot");
 }
@@ -78,399 +84,273 @@ function updateStatsUI() {
   statMaxStreakEl.textContent = maxStreak;
 }
 
+/* ===== PROGRESS ===== */
+
 async function loadProgress() {
-  if (!window.ArcadeProgress || typeof ArcadeProgress.load !== "function") return;
-
-  const save = await ArcadeProgress.load(GAME_ID);
-  gamesPlayed = save?.gamesPlayed ?? 0;
-  wins = save?.wins ?? 0;
-  currentStreak = save?.currentStreak ?? 0;
-  maxStreak = save?.maxStreak ?? 0;
-
+  if (!window.ArcadeProgress) return;
+  const s = await ArcadeProgress.load(GAME_ID);
+  gamesPlayed = s?.gamesPlayed ?? 0;
+  wins = s?.wins ?? 0;
+  currentStreak = s?.currentStreak ?? 0;
+  maxStreak = s?.maxStreak ?? 0;
   updateStatsUI();
 }
 
 async function saveProgress() {
-  if (!window.ArcadeProgress || typeof ArcadeProgress.save !== "function") return;
-
-  await ArcadeProgress.save(GAME_ID, {
-    gamesPlayed,
-    wins,
-    currentStreak,
-    maxStreak,
+  if (!window.ArcadeProgress) return;
+  await ArcadeProgress.save(GAME_ID,{
+    gamesPlayed,wins,currentStreak,maxStreak
   });
 }
 
+/* ===== DICTIONARY ===== */
+
 async function loadDictionary() {
   statusEl.textContent = "Pobieram słownik...";
-  try {
-    const resp = await fetch(DICT_URL);
-    const text = await resp.text();
-    const lines = text
-      .split("\n")
-      .map((x) => normalizeWord(x.split(" ")[0]))
-      .filter(Boolean);
-
-    allWords = [...new Set(lines)].filter((w) => w.length >= 4 && w.length <= 7);
-    statusEl.textContent = "Słownik załadowany.";
-  } catch (err) {
-    console.error("Błąd ładowania słownika:", err);
-    statusEl.textContent = "Błąd ładowania słownika.";
-  }
+  const r = await fetch(DICT_URL);
+  const t = await r.text();
+  allWords = [...new Set(
+    t.split("\n")
+     .map(x=>normalize(x.split(" ")[0]))
+     .filter(w=>w.length>=4 && w.length<=7)
+  )];
+  statusEl.textContent = "";
 }
 
+/* ===== GAME ===== */
+
 function chooseSecret() {
-  validWords = allWords.filter((w) => w.length === wordLength);
-  if (!validWords.length) return "";
-
+  validWords = allWords.filter(w=>w.length===wordLength);
   let w;
-  let safety = 0;
   do {
-    w = validWords[Math.floor(Math.random() * validWords.length)];
-    safety++;
-  } while (usedWords.has(w) && safety < 1000);
-
+    w = validWords[Math.random()*validWords.length|0];
+  } while(usedWords.has(w));
   usedWords.add(w);
   return w;
 }
 
-function initBoardStructure() {
+function initBoard() {
   boardEl.innerHTML = "";
-  boardEl.style.gridTemplateColumns = `repeat(${wordLength}, 42px)`;
+  boardEl.style.gridTemplateColumns = `repeat(${wordLength},42px)`;
   board = [];
 
-  for (let r = 0; r < MAX_ROWS; r++) {
-    const rowArr = [];
-    for (let c = 0; c < wordLength; c++) {
-      const div = document.createElement("div");
-      div.className = "tile";
-      boardEl.appendChild(div);
-      rowArr.push(div);
+  for(let r=0;r<MAX_ROWS;r++){
+    const rowArr=[];
+    for(let c=0;c<wordLength;c++){
+      const d=document.createElement("div");
+      d.className="tile";
+      boardEl.appendChild(d);
+      rowArr.push(d);
     }
     board.push(rowArr);
   }
 }
 
 function resetBoard() {
-  row = 0;
-  col = 0;
-  usedHintPositions = new Set();
-  hintTextEl.textContent = "";
+  row=0; col=0;
+  usedHintPositions.clear();
+  hintTextEl.textContent="";
 
-  for (let r = 0; r < MAX_ROWS; r++) {
-    for (let c = 0; c < wordLength; c++) {
-      const t = board[r][c];
-      t.textContent = "";
-      t.className = "tile";
-    }
-  }
-
-  // reset kolorów klawiatury
-  for (const k of Object.keys(keyboardState)) delete keyboardState[k];
-  const btns = document.querySelectorAll(".key-btn");
-  btns.forEach((b) => b.classList.remove("key-correct", "key-present", "key-absent"));
-}
-
-function buildKeyboard() {
-  controlsSlotEl.innerHTML = "";
-
-  const keyboardEl = document.createElement("div");
-  keyboardEl.className = "keyboard";
-
-  const inner = document.createElement("div");
-  inner.className = "keyboard-inner";
-  keyboardEl.appendChild(inner);
-
-  KEYBOARD_LAYOUT.forEach((rowKeys) => {
-    const rowDiv = document.createElement("div");
-    rowDiv.className = "keyboard-row";
-
-    rowKeys.forEach((k) => {
-      const btn = document.createElement("button");
-      btn.className = "key-btn";
-      btn.dataset.key = k;
-
-      if (k === "enter") {
-        btn.textContent = "ENTER";
-        btn.classList.add("key-wide");
-      } else if (k === "backspace") {
-        btn.textContent = "⌫";
-        btn.classList.add("key-wide");
-      } else {
-        btn.textContent = k;
-      }
-
-      btn.addEventListener("click", () => handleVirtualKey(k));
-      rowDiv.appendChild(btn);
-    });
-
-    inner.appendChild(rowDiv);
+  board.flat().forEach(t=>{
+    t.textContent="";
+    t.className="tile";
   });
 
-  controlsSlotEl.appendChild(keyboardEl);
+  Object.keys(keyboardState).forEach(k=>delete keyboardState[k]);
+  document.querySelectorAll(".key-btn")
+    .forEach(b=>b.classList.remove("key-correct","key-present","key-absent"));
 }
 
-function updateKeyColor(letter, newState) {
-  const cur = keyboardState[letter];
-  if (cur && KEY_STATE_PRIORITY[newState] <= KEY_STATE_PRIORITY[cur]) return;
-
-  keyboardState[letter] = newState;
-
-  const btns = document.querySelectorAll(".key-btn");
-  for (const b of btns) {
-    if (b.dataset.key === letter) {
-      b.classList.remove("key-correct", "key-present", "key-absent");
-      b.classList.add("key-" + newState);
-    }
-  }
+function startGame() {
+  secret = chooseSecret();
+  initBoard();
+  resetBoard();
+  buildKeyboard();
+  statusEl.textContent="Zgadnij słowo!";
 }
 
-function pressLetter(ch) {
-  if (row >= MAX_ROWS) return;
-  if (col >= wordLength) return;
+/* ===== KEYBOARD ===== */
 
-  const tile = board[row][col];
-  tile.textContent = ch.toUpperCase();
-  tile.classList.add("filled");
+function buildKeyboard() {
+  controlsSlotEl.innerHTML="";
+  const kbd=document.createElement("div");
+  kbd.className="keyboard";
+  const inner=document.createElement("div");
+  inner.className="keyboard-inner";
+  kbd.appendChild(inner);
+
+  KEYBOARD_LAYOUT.forEach(row=>{
+    const r=document.createElement("div");
+    r.className="keyboard-row";
+    row.forEach(k=>{
+      const b=document.createElement("button");
+      b.className="key-btn";
+      b.dataset.key=k;
+      b.textContent = k==="enter"?"ENTER":k==="backspace"?"⌫":k;
+      if(k==="enter"||k==="backspace") b.classList.add("key-wide");
+      b.onclick=()=>handleKey(k);
+      r.appendChild(b);
+    });
+    inner.appendChild(r);
+  });
+
+  controlsSlotEl.appendChild(kbd);
+}
+
+function updateKey(letter,state){
+  const cur=keyboardState[letter];
+  if(cur && KEY_PRIORITY[state]<=KEY_PRIORITY[cur]) return;
+  keyboardState[letter]=state;
+  document.querySelectorAll(`.key-btn[data-key="${letter}"]`)
+    .forEach(b=>{
+      b.classList.remove("key-correct","key-present","key-absent");
+      b.classList.add("key-"+state);
+    });
+}
+
+/* ===== INPUT ===== */
+
+function handleKey(k){
+  if(k==="enter") return submit();
+  if(k==="backspace") return erase();
+  addLetter(k);
+}
+
+function addLetter(ch){
+  if(col>=wordLength||row>=MAX_ROWS) return;
+  const t=board[row][col];
+  t.textContent=ch.toUpperCase();
+  t.classList.add("filled");
   col++;
 }
 
-function erase() {
-  if (col <= 0) return;
+function erase(){
+  if(col<=0) return;
   col--;
-  const tile = board[row][col];
-  tile.textContent = "";
-  tile.classList.remove("filled");
+  const t=board[row][col];
+  t.textContent="";
+  t.classList.remove("filled");
 }
 
-function colorRow(r) {
-  const guess = [];
-  for (let c = 0; c < wordLength; c++) {
-    guess[c] = board[r][c].textContent.toLowerCase();
-  }
+/* ===== CHECK ===== */
 
-  const secretArr = secret.split("");
-  const counts = {};
-  for (const ch of secretArr) counts[ch] = (counts[ch] || 0) + 1;
+function colorRow(r){
+  const guess=board[r].map(t=>t.textContent.toLowerCase());
+  const s=secret.split("");
+  const cnt={};
+  s.forEach(c=>cnt[c]=(cnt[c]||0)+1);
 
-  // zielone
-  for (let c = 0; c < wordLength; c++) {
-    if (guess[c] === secretArr[c]) {
-      board[r][c].classList.add("correct");
-      updateKeyColor(guess[c], "correct");
-      counts[guess[c]]--;
+  guess.forEach((c,i)=>{
+    if(c===s[i]){
+      board[r][i].classList.add("correct");
+      updateKey(c,"correct");
+      cnt[c]--;
     }
-  }
+  });
 
-  // żółte / szare
-  for (let c = 0; c < wordLength; c++) {
-    const tile = board[r][c];
-    const ch = guess[c];
-
-    if (tile.classList.contains("correct")) continue;
-
-    if (counts[ch] > 0) {
-      tile.classList.add("present");
-      updateKeyColor(ch, "present");
-      counts[ch]--;
-    } else {
-      tile.classList.add("absent");
-      updateKeyColor(ch, "absent");
+  guess.forEach((c,i)=>{
+    const t=board[r][i];
+    if(t.classList.contains("correct")) return;
+    if(cnt[c]>0){
+      t.classList.add("present");
+      updateKey(c,"present");
+      cnt[c]--;
+    }else{
+      t.classList.add("absent");
+      updateKey(c,"absent");
     }
-  }
+  });
 }
 
-async function registerGameFinished(win) {
+async function finish(win){
   gamesPlayed++;
-
-  if (win) {
-    wins++;
-    currentStreak++;
-    if (currentStreak > maxStreak) maxStreak = currentStreak;
-  } else {
-    currentStreak = 0;
-  }
+  if(win){
+    wins++; currentStreak++;
+    maxStreak=Math.max(maxStreak,currentStreak);
+  }else currentStreak=0;
 
   updateStatsUI();
   await saveProgress();
 
-  // monety: tylko zalogowany
-  if (isLoggedInCoinsAvailable()) {
-    try {
-      // (jeśli coins.js wymaga load — bezpiecznie wywołać)
-      if (typeof ArcadeCoins.load === "function") await ArcadeCoins.load();
-
-      await ArcadeCoins.addForGame(GAME_ID, win ? 5 : 1, {
-        reason: win ? "win" : "loss",
-        secret,
-        length: wordLength,
-      });
-
-      if (window.ArcadeAuthUI?.refreshCoins) await ArcadeAuthUI.refreshCoins();
-    } catch (e) {
-      console.warn("Nie udało się dodać monet:", e);
-    }
+  if(coinsReady()){
+    await ArcadeCoins.addForGame(GAME_ID, win?5:1,{reason:win?"win":"loss"});
+    ArcadeAuthUI?.refreshCoins();
   }
 }
 
-function submitRow() {
-  if (row >= MAX_ROWS) return;
-
-  if (col < wordLength) {
-    statusEl.textContent = "Wpisz pełne słowo.";
+function submit(){
+  if(col<wordLength){
+    statusEl.textContent="Wpisz pełne słowo.";
     return;
   }
 
-  let guess = "";
-  for (let c = 0; c < wordLength; c++) guess += board[row][c].textContent.toLowerCase();
-
-  if (!validWords.includes(guess)) {
-    statusEl.textContent = "Nie ma takiego słowa.";
+  const guess=board[row].map(t=>t.textContent.toLowerCase()).join("");
+  if(!validWords.includes(guess)){
+    statusEl.textContent="Nie ma takiego słowa.";
     return;
   }
 
   colorRow(row);
 
-  if (guess === secret) {
-    statusEl.textContent = "Brawo! Trafione!";
-    registerGameFinished(true);
-    row = MAX_ROWS;
+  if(guess===secret){
+    statusEl.textContent="Brawo!";
+    finish(true);
+    row=MAX_ROWS;
     return;
   }
 
-  row++;
-  col = 0;
-
-  if (row >= MAX_ROWS) {
-    statusEl.textContent = "Koniec! Słowo: " + secret.toUpperCase();
-    registerGameFinished(false);
-  } else {
-    statusEl.textContent = "";
+  row++; col=0;
+  if(row>=MAX_ROWS){
+    statusEl.textContent="Koniec! "+secret.toUpperCase();
+    finish(false);
   }
 }
 
-function handleVirtualKey(k) {
-  statusEl.textContent = "";
+/* ===== HINT ===== */
 
-  if (k === "enter") return submitRow();
-  if (k === "backspace") return erase();
-  pressLetter(k);
+async function useHint(){
+  if(!coinsReady()) return;
+  const bal=await ArcadeCoins.getBalance();
+  if(bal<HINT_COST) return;
+
+  const free=[...Array(wordLength).keys()].filter(i=>!usedHintPositions.has(i));
+  if(!free.length) return;
+
+  const pos=free[Math.random()*free.length|0];
+  usedHintPositions.add(pos);
+
+  await ArcadeCoins.addForGame(GAME_ID,-HINT_COST,{reason:"hint"});
+  ArcadeAuthUI?.refreshCoins();
+
+  hintTextEl.textContent=`Podpowiedź: ${pos+1} = ${secret[pos].toUpperCase()}`;
 }
 
-function setupKeyboardListener() {
-  document.addEventListener("keydown", (e) => {
-    statusEl.textContent = "";
+/* ===== START ===== */
 
-    const k = e.key.toLowerCase();
-    if (k === "enter") return submitRow();
-    if (k === "backspace") return erase();
-
-    if (/^[a-ząćęłńóśżź]$/i.test(k)) pressLetter(k);
-  });
-}
-
-async function useHint() {
-  if (!secret) {
-    statusEl.textContent = "Najpierw rozpocznij grę.";
-    return;
-  }
-
-  if (!isLoggedInCoinsAvailable()) {
-    statusEl.textContent = "Podpowiedzi są dostępne tylko dla zalogowanych.";
-    return;
-  }
-
-  hintBtn.disabled = true;
-  statusEl.textContent = "";
-
-  try {
-    if (typeof ArcadeCoins.load === "function") await ArcadeCoins.load();
-
-    // getBalance bywa async w nowych implementacjach — obsłuż oba przypadki
-    const balMaybe = ArcadeCoins.getBalance();
-    const bal = balMaybe?.then ? await balMaybe : balMaybe;
-
-    if (bal == null) {
-      statusEl.textContent = "Nie udało się pobrać salda.";
-      return;
-    }
-
-    if (bal < HINT_COST) {
-      statusEl.textContent = "Za mało diamentów.";
-      return;
-    }
-
-    const candidates = [];
-    for (let i = 0; i < wordLength; i++) if (!usedHintPositions.has(i)) candidates.push(i);
-
-    if (!candidates.length) {
-      statusEl.textContent = "Brak dostępnych podpowiedzi.";
-      return;
-    }
-
-    const pos = candidates[Math.floor(Math.random() * candidates.length)];
-    usedHintPositions.add(pos);
-
-    const letter = secret[pos].toUpperCase();
-
-    await ArcadeCoins.addForGame(GAME_ID, -HINT_COST, {
-      reason: "hint",
-      letter,
-      position: pos,
-      length: wordLength,
-    });
-
-    if (window.ArcadeAuthUI?.refreshCoins) await ArcadeAuthUI.refreshCoins();
-
-    hintTextEl.textContent = `Podpowiedź: miejsce ${pos + 1} = ${letter}. (-${HINT_COST}💎)`;
-  } catch (e) {
-    console.error("Błąd podpowiedzi:", e);
-    statusEl.textContent = "Błąd podpowiedzi.";
-  } finally {
-    hintBtn.disabled = false;
-  }
-}
-
-function startNewGame() {
-  secret = chooseSecret();
-  if (!secret) {
-    statusEl.textContent = "Brak słów o tej długości.";
-    return;
-  }
-
-  initBoardStructure();
-  resetBoard();
-  buildKeyboard();
-
-  statusEl.textContent = "Zgadnij słowo!";
-}
-
-async function initGame() {
+document.addEventListener("DOMContentLoaded",async()=>{
   cacheDom();
-  setupKeyboardListener();
-
-  btnNew?.addEventListener("click", startNewGame);
-
-  btnReset?.addEventListener("click", async () => {
-    gamesPlayed = 0;
-    wins = 0;
-    currentStreak = 0;
-    maxStreak = 0;
-    updateStatsUI();
-    await saveProgress();
-    statusEl.textContent = "Rekordy wyczyszczone.";
-  });
-
-  wordLenSel?.addEventListener("change", () => {
-    wordLength = parseInt(wordLenSel.value, 10);
-    startNewGame();
-  });
-
-  hintBtn?.addEventListener("click", useHint);
-
   await loadProgress();
   await loadDictionary();
-  startNewGame();
-}
 
-document.addEventListener("DOMContentLoaded", initGame);
+  btnNew.onclick=startGame;
+  btnHint.onclick=useHint;
+  btnReset.onclick=async()=>{
+    gamesPlayed=wins=currentStreak=maxStreak=0;
+    updateStatsUI();
+    await saveProgress();
+  };
+
+  wordLenSel.onchange=()=>{
+    wordLength=+wordLenSel.value;
+    startGame();
+  };
+
+  document.addEventListener("keydown",e=>{
+    const k=e.key.toLowerCase();
+    if(k==="enter") submit();
+    else if(k==="backspace") erase();
+    else if(/^[a-ząćęłńóśżź]$/.test(k)) addLetter(k);
+  });
+
+  startGame();
+});
