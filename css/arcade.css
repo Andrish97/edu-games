@@ -69,6 +69,16 @@
 .arcade-room-btn .icon {
   font-size: 16px;
 }
+/* Mobile: Pokój nagród tylko jako ikonka */
+@media (max-width: 520px) {
+  .arcade-room-btn .label {
+    display: none;
+  }
+  .arcade-room-btn {
+    padding: 8px 10px;
+    gap: 0;
+  }
+}
 
 /* ---------------------------------------------
    Kategorie: karty jak w przeglądarce
