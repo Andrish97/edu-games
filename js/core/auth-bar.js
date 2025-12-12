@@ -1,93 +1,75 @@
 // js/core/auth-bar.js
-// Pasek logowania / rejestracji w motywie Neon Arcade
-// Wymaga: auth.js (ArcadeAuth + ArcadeAuthUI)
+// Neon Arcade Auth Bar v2 (z powrotem do Arcade)
 
 (function () {
-function barHTML() {
-  return `
-    <div class="arcade-topbar">
-      <div class="arcade-user">
-        <span class="auth-status">Ładuję status...</span>
-        <span class="auth-coins"></span>
-        <span class="auth-coins-hint"></span>
+  function barHTML(backUrl) {
+    return `
+      <div class="arcade-topbar">
+        <div class="arcade-topbar-inner">
+
+          <button class="arcade-back" type="button">
+            <span class="arrow">←</span>
+            <span class="label">Arcade</span>
+          </button>
+
+          <div class="arcade-user">
+            <span class="auth-status">Ładuję...</span>
+            <span class="auth-coins"></span>
+            <button class="auth-toggle">👤 Konto</button>
+          </div>
+
+          <div class="arcade-auth">
+            <input type="email" class="arcade-input auth-email" placeholder="Email" />
+            <input type="password" class="arcade-input auth-pass" placeholder="Hasło" />
+            <input type="password" class="arcade-input auth-pass2" placeholder="Powtórz hasło" style="display:none" />
+
+            <button class="arcade-btn auth-login">Zaloguj</button>
+            <button class="arcade-btn auth-register">Załóż konto</button>
+            <button class="arcade-btn guest auth-guest">Gość</button>
+            <button class="arcade-btn logout auth-logout" style="display:none">Wyloguj</button>
+
+            <button class="auth-forgot">Przypomnij hasło</button>
+            <span class="auth-error"></span>
+          </div>
+        </div>
       </div>
-
-      <div class="arcade-auth">
-        <input type="email" class="arcade-input auth-email" placeholder="Email" autocomplete="email" />
-        <input type="password" class="arcade-input auth-pass" placeholder="Hasło" autocomplete="current-password" />
-        <input type="password" class="arcade-input auth-pass2" placeholder="Powtórz hasło" autocomplete="new-password" style="display:none" />
-
-        <button class="arcade-btn auth-login">Zaloguj</button>
-        <button class="arcade-btn auth-register">Załóż konto</button>
-        <button class="arcade-btn guest auth-guest">Gość</button>
-        <button class="arcade-btn logout auth-logout" style="display:none">Wyloguj</button>
-
-        <button type="button" class="auth-forgot">Przypomnij hasło</button>
-        <span class="auth-error"></span>
-      </div>
-    </div>
-  `;
-}
+    `;
+  }
 
   function initPanel(holder) {
-    holder.innerHTML = barHTML();
+    const backUrl = holder.getAttribute("data-back-url") || "../../arcade.html";
+    holder.innerHTML = barHTML(backUrl);
 
-    const email = holder.querySelector(".auth-email");
-    const pass = holder.querySelector(".auth-pass");
-    const pass2 = holder.querySelector(".auth-pass2");
-    const status = holder.querySelector(".auth-status");
-    const error = holder.querySelector(".auth-error");
-    const coins = holder.querySelector(".auth-coins");
-    const coinsHint = holder.querySelector(".auth-coins-hint");
-    const btnLog = holder.querySelector(".auth-login");
-    const btnReg = holder.querySelector(".auth-register");
-    const btnGst = holder.querySelector(".auth-guest");
-    const btnOut = holder.querySelector(".auth-logout");
-    const btnFgt = holder.querySelector(".auth-forgot");
+    const topbar = holder.querySelector(".arcade-topbar");
+    const btnToggle = holder.querySelector(".auth-toggle");
+    const btnBack = holder.querySelector(".arcade-back");
 
-    const afterLogin = holder.getAttribute("data-after-login") || null;
-    const afterGuest = holder.getAttribute("data-after-guest") || null;
-    const checkHash = holder.hasAttribute("data-check-signup-hash");
+    btnBack.addEventListener("click", () => {
+      window.location.href = backUrl;
+    });
 
-    const opts = {
-      email,
-      pass,
-      pass2,
-      status,
-      error,
-      btnLogin: btnLog,
-      btnRegister: btnReg,
-      btnGuest: btnGst,
-      btnLogout: btnOut,
-      btnForgot: btnFgt,
-      checkSignupHash: checkHash,
-      coins,
-      coinsHint,
-    };
+    btnToggle.addEventListener("click", () => {
+      topbar.classList.toggle("drawer-open");
+    });
 
-    if (afterLogin) {
-      opts.onLoginSuccess = () => {
-        window.location.href = afterLogin;
-      };
-    }
-    if (afterGuest) {
-      opts.onGuest = () => {
-        window.location.href = afterGuest;
-      };
-    }
-
-    ArcadeAuthUI.initLoginPanel(opts);
+    ArcadeAuthUI.initLoginPanel({
+      email: holder.querySelector(".auth-email"),
+      pass: holder.querySelector(".auth-pass"),
+      pass2: holder.querySelector(".auth-pass2"),
+      status: holder.querySelector(".auth-status"),
+      error: holder.querySelector(".auth-error"),
+      coins: holder.querySelector(".auth-coins"),
+      btnLogin: holder.querySelector(".auth-login"),
+      btnRegister: holder.querySelector(".auth-register"),
+      btnGuest: holder.querySelector(".auth-guest"),
+      btnLogout: holder.querySelector(".auth-logout"),
+      btnForgot: holder.querySelector(".auth-forgot"),
+    });
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    const holders = document.querySelectorAll("[data-arcade-auth-bar]");
-    holders.forEach(initPanel);
+    document
+      .querySelectorAll("[data-arcade-auth-bar]")
+      .forEach(initPanel);
   });
-
-  // ręczne API (na przyszłość)
-  window.ArcadeAuthBar = {
-    mount(holder) {
-      initPanel(holder);
-    },
-  };
 })();
