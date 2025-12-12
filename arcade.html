@@ -30,16 +30,16 @@
       <header class="arcade-header">
         <h1 class="arcade-title">Neon Arcade</h1>
 
-        <!-- ZAWSZE widoczny (także dla niezalogowanego) -->
-        <a href="room.html" class="arcade-room-btn" title="Pokój nagród">
+        <!-- domyślnie ukryty: pokażemy tylko gdy user zalogowany -->
+        <a id="room-btn" href="room.html" class="arcade-room-btn" hidden>
           <span class="icon">🏠</span>
           <span class="label">Pokój nagród</span>
         </a>
       </header>
 
-      <div id="categories" class="categories-tabs" aria-label="Kategorie"></div>
+      <div id="categories" class="categories-tabs"></div>
 
-      <section class="games-section" aria-label="Gry">
+      <section class="games-section">
         <div id="games"></div>
       </section>
 
