@@ -1,16 +1,8 @@
-/* ======================================
-   Znajdź słowo – Neon Arcade (2025)
-   - auth-bar w HTML (data-back-url)
-   - progres: ArcadeProgress
-   - monety: ArcadeCoins (globalne 💎)
-   - reset tylko w panelu statów (ga-stats-panel)
-   ====================================== */
-
 const GAME_ID = "znajdz-slowo";
 const QUESTIONS_PER_LEVEL = 6;
 
 // ======================================
-// ŚWIATY – PEŁNA KONFIGURACJA
+// ŚWIATY – CONFIG
 // ======================================
 
 const WORLDS = [
@@ -252,26 +244,13 @@ let streak = 0;
 let bestStreakCurrentWorld = 0;
 let questionInWorld = 0;
 
-// DOM (karta)
-let worldsRow;
-let emojiEl;
-let choicesEl;
-let scoreEl;
-let messageEl;
-let nextBtn;
+// DOM
+let worldsRow, emojiEl, choicesEl, scoreEl, messageEl, nextBtn, streakEl, progressBar, worldNameLabel, hintEl;
+let hintBtn, btnNewTop, btnResetBest; // hint w topbarze
 let cardEl;
-let streakEl;
-let progressBar;
-let worldNameLabel;
-let hintEl;
-let hintBtn;
 
-// DOM (topbar / stat-panel)
-let btnNewTop;
-let btnResetBest;
-let statScoreEl;
-let statWorldEl;
-let statStreakEl;
+// stat-panel
+let statScoreEl, statWorldEl, statStreakEl;
 
 // ======================================
 // HELPERY
@@ -327,9 +306,7 @@ function loadProgress() {
         score = data.score;
       }
     })
-    .catch((err) => {
-      console.error("[ZnajdzSlowo] Błąd load:", err);
-    });
+    .catch((err) => console.error("[ZnajdzSlowo] Błąd load:", err));
 }
 
 function saveProgress() {
@@ -338,13 +315,7 @@ function saveProgress() {
     return;
   }
 
-  const payload = {
-    unlockedWorlds,
-    currentWorldIndex,
-    score
-  };
-
-  ArcadeProgress.save(GAME_ID, payload).catch((err) => {
+  ArcadeProgress.save(GAME_ID, { unlockedWorlds, currentWorldIndex, score }).catch((err) => {
     console.error("[ZnajdzSlowo] Błąd save:", err);
   });
 }
@@ -356,7 +327,6 @@ function saveProgress() {
 function awardCoins(amount, reason) {
   const delta = Math.floor(amount);
   if (!Number.isFinite(delta) || delta === 0) return;
-
   if (!window.ArcadeCoins || !ArcadeCoins.addForGame) return;
 
   ArcadeCoins.addForGame(GAME_ID, delta, { reason })
@@ -365,18 +335,11 @@ function awardCoins(amount, reason) {
         ArcadeAuthUI.refreshCoins();
       }
     })
-    .catch((err) => {
-      console.warn("[ZnajdzSlowo] Nie udało się zmienić monet:", err);
-    });
+    .catch((err) => console.warn("[ZnajdzSlowo] Nie udało się zmienić monet:", err));
 }
 
 async function spendCoins(cost, meta) {
-  if (
-    !window.ArcadeCoins ||
-    !ArcadeCoins.load ||
-    !ArcadeCoins.getBalance ||
-    !ArcadeCoins.addForGame
-  ) {
+  if (!window.ArcadeCoins || !ArcadeCoins.load || !ArcadeCoins.getBalance || !ArcadeCoins.addForGame) {
     messageEl.textContent = "System monet jest chwilowo niedostępny.";
     return false;
   }
@@ -384,6 +347,7 @@ async function spendCoins(cost, meta) {
   try {
     await ArcadeCoins.load();
     const balance = ArcadeCoins.getBalance();
+
     if (typeof balance !== "number" || balance < cost) {
       messageEl.textContent = "Masz za mało diamentów (5💎).";
       return false;
@@ -404,7 +368,7 @@ async function spendCoins(cost, meta) {
 }
 
 // ======================================
-// UI – aktualizacje
+// UI
 // ======================================
 
 function updateStatsPanel() {
@@ -414,12 +378,12 @@ function updateStatsPanel() {
 }
 
 function updateScoreUI() {
-  if (scoreEl) scoreEl.textContent = "Punkty: " + score;
+  scoreEl.textContent = "Punkty: " + score;
   updateStatsPanel();
 }
 
 function updateStreakDisplay() {
-  if (streakEl) streakEl.textContent = String(streak);
+  streakEl.textContent = String(streak);
 
   const streakInfo = document.querySelector(".streak-info");
   if (streakInfo) {
@@ -432,23 +396,22 @@ function updateStreakDisplay() {
 
 function updateProgress() {
   const progress = (questionInWorld / QUESTIONS_PER_LEVEL) * 100;
-  if (progressBar) progressBar.style.width = progress + "%";
+  progressBar.style.width = progress + "%";
 }
 
 function loadWorldInfo() {
   const world = WORLDS[currentWorldIndex];
-  if (worldNameLabel) worldNameLabel.textContent = "Świat: " + world.name;
-  if (hintEl) hintEl.textContent = world.hint;
+  worldNameLabel.textContent = "Świat: " + world.name;
+  hintEl.textContent = world.hint;
   updateProgress();
   updateStatsPanel();
 }
 
 // ======================================
-// ŚWIATY – przyciski (same emotki)
+// ŚWIATY
 // ======================================
 
 function buildWorldButtons() {
-  if (!worldsRow) return;
   worldsRow.innerHTML = "";
 
   WORLDS.forEach((world, index) => {
@@ -456,12 +419,9 @@ function buildWorldButtons() {
     btn.className = "world-btn";
     if (index === currentWorldIndex) btn.classList.add("active");
     if (index >= unlockedWorlds) btn.classList.add("locked");
-    btn.dataset.index = String(index);
 
-    const iconSpan = document.createElement("span");
-    iconSpan.className = "icon";
-    iconSpan.textContent = world.icon;
-    btn.appendChild(iconSpan);
+    btn.dataset.index = String(index);
+    btn.textContent = world.icon;
 
     btn.addEventListener("click", () => {
       if (index >= unlockedWorlds) {
@@ -496,15 +456,16 @@ function pickRandomRoundFromWorld(world) {
 
 function loadRound() {
   answered = false;
-  if (messageEl) messageEl.textContent = "";
+  messageEl.textContent = "";
 
   const world = WORLDS[currentWorldIndex];
   currentRound = pickRandomRoundFromWorld(world);
 
-  if (emojiEl) emojiEl.textContent = currentRound.emoji;
+  // duży emoji z tłem robi CSS na .emoji-box
+  emojiEl.textContent = currentRound.emoji;
 
   const options = shuffle([currentRound.correct, ...currentRound.others]);
-  if (choicesEl) choicesEl.innerHTML = "";
+  choicesEl.innerHTML = "";
 
   options.forEach((word) => {
     const btn = document.createElement("button");
@@ -538,9 +499,7 @@ function handleChoice(button, isCorrect) {
     updateScoreUI();
     updateStreakDisplay();
 
-    // +1 💎 za poprawną odpowiedź
     awardCoins(1, "correct-answer");
-
     saveProgress();
   } else {
     button.classList.add("wrong");
@@ -562,29 +521,28 @@ function handleChoice(button, isCorrect) {
 }
 
 // ======================================
-// POZIOM / ŚWIAT – koniec
+// KONIEC POZIOMU
 // ======================================
 
 function completeWorldIfNeeded() {
   if (questionInWorld < QUESTIONS_PER_LEVEL) return;
 
-  const msg = randomItem(levelCompleteMessages);
   messageEl.textContent =
-    msg + " (Najlepsza seria w tym świecie: " + bestStreakCurrentWorld + ")";
+    randomItem(levelCompleteMessages) +
+    " (Najlepsza seria w tym świecie: " +
+    bestStreakCurrentWorld +
+    ")";
 
   questionInWorld = 0;
   bestStreakCurrentWorld = 0;
   streak = 0;
   updateStreakDisplay();
 
-  // +5 💎 za ukończenie poziomu
   awardCoins(5, "level-complete");
 
   if (unlockedWorlds < WORLDS.length && currentWorldIndex === unlockedWorlds - 1) {
     unlockedWorlds++;
     messageEl.textContent += " Nowy świat odblokowany!";
-
-    // +10 💎 za odblokowanie nowego świata
     awardCoins(10, "world-unlock");
   }
 
@@ -594,7 +552,7 @@ function completeWorldIfNeeded() {
 }
 
 // ======================================
-// NAVIGACJA RUND
+// NAV
 // ======================================
 
 function nextRound() {
@@ -606,16 +564,12 @@ function nextRound() {
   questionInWorld++;
   completeWorldIfNeeded();
 
-  const allButtons = document.querySelectorAll(".choice-btn");
-  allButtons.forEach((b) => b.classList.remove("correct", "wrong", "disabled"));
-
   if (cardEl) cardEl.classList.remove("shake");
-
   loadRound();
 }
 
 // ======================================
-// RESET PROGRESU (Tylko w panelu statów)
+// RESET (tylko w panelu statów)
 // ======================================
 
 function attachResetProgress() {
@@ -641,15 +595,13 @@ function attachResetProgress() {
     loadRound();
 
     if (window.ArcadeProgress && ArcadeProgress.clear) {
-      ArcadeProgress.clear(GAME_ID).catch((err) => {
-        console.error("[ZnajdzSlowo] Błąd clear:", err);
-      });
+      ArcadeProgress.clear(GAME_ID).catch((err) => console.error("[ZnajdzSlowo] Błąd clear:", err));
     }
   });
 }
 
 // ======================================
-// PODPOWIEDŹ ZA 5 💎
+// PODPOWIEDŹ (w topbarze) ZA 5💎
 // ======================================
 
 function attachHintHandler() {
@@ -686,16 +638,16 @@ function attachHintHandler() {
 }
 
 // ======================================
-// TOPBAR: Nowa runda
+// TOPBAR: Nowa gra (Nowa runda)
 // ======================================
 
 function attachNewRoundTopbar() {
   if (!btnNewTop) return;
+
   btnNewTop.addEventListener("click", () => {
-    // Nie niszczymy progresu – to tylko szybkie „losuj ponownie”
-    if (cardEl) cardEl.classList.remove("shake");
     answered = false;
-    if (messageEl) messageEl.textContent = "";
+    messageEl.textContent = "";
+    if (cardEl) cardEl.classList.remove("shake");
     loadRound();
   });
 }
@@ -715,22 +667,31 @@ async function initZnajdzSlowo() {
   progressBar = document.getElementById("progressBar");
   worldNameLabel = document.getElementById("worldNameLabel");
   hintEl = document.getElementById("hint");
+
+  // hint w topbarze
   hintBtn = document.getElementById("hintBtn");
-
-  // karta do shake
-  cardEl = document.querySelector(".znajdz-slowo-card");
-
-  // topbar + stat-panel
   btnNewTop = document.getElementById("btn-new");
   btnResetBest = document.getElementById("btn-reset-best");
+
+  // staty
   statScoreEl = document.getElementById("v-score");
   statWorldEl = document.getElementById("v-world");
   statStreakEl = document.getElementById("v-streak");
 
-  // Wymagane elementy do działania gry:
+  // shake na całym ga-card (plansza)
+  cardEl = document.querySelector(".ga-card") || document.getElementById("game-mount");
+
   const required = [
-    worldsRow, emojiEl, choicesEl, scoreEl, messageEl, nextBtn,
-    streakEl, progressBar, worldNameLabel, hintEl, hintBtn
+    worldsRow,
+    emojiEl,
+    choicesEl,
+    scoreEl,
+    messageEl,
+    nextBtn,
+    streakEl,
+    progressBar,
+    worldNameLabel,
+    hintEl
   ];
 
   if (required.some((x) => !x)) {
@@ -749,8 +710,8 @@ async function initZnajdzSlowo() {
   nextBtn.addEventListener("click", nextRound);
 
   attachNewRoundTopbar();
-  attachResetProgress();
   attachHintHandler();
+  attachResetProgress();
 }
 
 document.addEventListener("DOMContentLoaded", initZnajdzSlowo);
